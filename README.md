@@ -1,0 +1,2 @@
+# Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-
+End-to-end batch data pipeline project using Hadoop (HDFS, Hive) for scalable storage &amp; transformation. Integrates processed data into MariaDB (SQL) for analytics and MongoDB (NoSQL) for flexible storage. Built with Python &amp; Docker Compose for reproducible environment setup. Demonstrates core data engineering skills.
