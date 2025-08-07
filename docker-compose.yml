@@ -111,7 +111,7 @@ services:
           condition: service_healthy
       mem_limit: 2g
       healthcheck:
-        test: ["CMD", "hive", "--service", "metastore"]
+        test: ["CMD", "nc", "-z", "localhost", "10000"]
         interval: 10s
         timeout: 5s
         retries: 5
