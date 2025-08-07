@@ -19,7 +19,7 @@ Industries like manufacturing generate vast batches of data—sensor logs, equip
 
 ### 🧱 Step 1: Orchestrating the Environment with Docker Compose
 
-I used Docker Compose to containerize and integrate key services: Hadoop (NameNode, DataNode), Hive, MariaDB, MongoDB, and JupyterLab. This taught me cloud-native patterns and ensured consistent deployment.
+I used Docker Compose to containerize and integrate key services: Hadoop (NameNode, DataNode), Hive, MariaDB, MongoDB, and JupyterLab. This taught me cloud-native patterns and ensured consistent deployment to define a (reproducible) data engineering environment.
 
 **Highlights:**
 - Allocated 4GB+ RAM for local container orchestration.
