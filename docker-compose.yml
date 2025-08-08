@@ -101,6 +101,11 @@ services:
         condition: service_healthy
       mariadb:
         condition: service_healthy
+    healthcheck:
+        test: ["CMD", "nc", "-z", "localhost", "10000"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
     entrypoint: ["/usr/local/bin/hive-start.sh"]
     
 
