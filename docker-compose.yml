@@ -88,14 +88,13 @@ services:
       - "10000:10000"
       - "9083:9083"
     volumes:
-      - ./hive-site.xml:/opt/hive/conf/hive-site.xml
-      - ./hive-start.sh:/usr/local/bin/hive-start.sh
-      - ./mysql-connector-j-8.4.0.jar:/opt/hive/lib/mysql-connector-j-8.4.0.jar
+      - ./hive-start.sh:/usr/local/bin/hive-start.sh:ro
+      - ./hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+      - ./mysql-connector-j-8.4.0.jar:/opt/hive/lib/mysql-connector-j-8.4.0.jar:ro
+      - ./hadoop-conf:/opt/hadoop/etc/hadoop:ro     # <- mount the whole dir
     environment:
-      - SKIP_SCHEMA_INIT=true            # <- prevent the image from doing its own Derby init
-      - HIVE_DB=mysql                   # <- fix the earlier typo
-      - HIVE_AUX_JARS_PATH=/opt/hive/lib/mysql-connector-j-8.4.0.jar
-      - HADOOP_CONF_fs_defaultFS=hdfs://namenode:9000
+      HIVE_CONF_DIR: /opt/hive/conf
+      HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
     networks:
       - big-data-net
     depends_on:
@@ -104,10 +103,12 @@ services:
       mariadb:
         condition: service_healthy
     healthcheck:
-        test: ["CMD", "nc", "-z", "localhost", "10000"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+      test: ["CMD-SHELL", "/opt/hive/bin/beeline -u 'jdbc:hive2://127.0.0.1:10000/' -n hive -e 'show databases' >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 10
+      start_period: 150s
+
     entrypoint: ["/usr/local/bin/hive-start.sh"]
     
     
