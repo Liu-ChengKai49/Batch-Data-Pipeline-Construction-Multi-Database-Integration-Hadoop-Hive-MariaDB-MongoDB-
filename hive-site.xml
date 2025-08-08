@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <configuration>
   <property>
-    <name>javax.jdo.option.ConnectionURL</name>
-    <value>jdbc:mysql://mariadb:3306/hive_metastore</value>
-    <description>JDBC connect string for a JDBC metastore</description>
+   <name>javax.jdo.option.ConnectionDriverName</name>
+   <value>com.mysql.cj.jdbc.Driver</value>
   </property>
   <property>
-    <name>javax.jdo.option.ConnectionDriverName</name>
-    <value>org.mariadb.jdbc.Driver</value>
-    <description>Driver class name for a JDBC metastore</description>
+    <name>javax.jdo.option.ConnectionURL</name>
+    <value>jdbc:mysql://mariadb:3306/hive_metastore?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true</value>
   </property>
+
+
   <property>
     <name>javax.jdo.option.ConnectionUserName</name>
     <value>hive</value>
