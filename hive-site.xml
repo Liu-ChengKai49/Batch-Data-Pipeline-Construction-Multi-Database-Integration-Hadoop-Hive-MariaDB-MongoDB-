@@ -2,22 +2,27 @@
 <configuration>
   <property>
     <name>javax.jdo.option.ConnectionURL</name>
-    <value>jdbc:postgresql://postgres:5432/hive_metastore</value>
+    <value>jdbc:mysql://mariadb:3306/hive_metastore</value>
+    <description>JDBC connect string for a JDBC metastore</description>
   </property>
   <property>
     <name>javax.jdo.option.ConnectionDriverName</name>
-    <value>org.postgresql.Driver</value>
+    <value>org.mariadb.jdbc.Driver</value>
+    <description>Driver class name for a JDBC metastore</description>
   </property>
   <property>
     <name>javax.jdo.option.ConnectionUserName</name>
-    <value>hiveuser</value>
+    <value>hive</value>
+    <description>Username to use against metastore database</description>
   </property>
   <property>
     <name>javax.jdo.option.ConnectionPassword</name>
-    <value>hivepassword</value>
+    <value>hive_password</value>
+    <description>Password to use against metastore database</description>
   </property>
   <property>
     <name>hive.metastore.warehouse.dir</name>
     <value>/user/hive/warehouse</value>
+    <description>location of default database for the warehouse</description>
   </property>
 </configuration>
