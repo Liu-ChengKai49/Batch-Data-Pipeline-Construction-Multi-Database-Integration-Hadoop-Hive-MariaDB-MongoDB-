@@ -90,19 +90,19 @@ services:
     volumes:
       - ./hive-site.xml:/opt/hive/conf/hive-site.xml
       - ./hive-start.sh:/usr/local/bin/hive-start.sh
-      - ./mariadb-java-client-3.5.4.jar:/opt/hive/lib/mariadb-java-client-3.5.4.jar
+      - ./mysql-connector-j-8.4.0.jar:/opt/hive/lib/mysql-connector-j-8.4.0.jar
     environment:
       - SKIP_SCHEMA_INIT=true            # <- prevent the image from doing its own Derby init
       - HIVE_DB=mysql                   # <- fix the earlier typo
-      - HIVE_AUX_JARS_PATH=/opt/hive/lib/mariadb-java-client-3.5.4.jar
+      - HIVE_AUX_JARS_PATH=/opt/hive/lib/mysql-connector-j-8.4.0.jar
       - HADOOP_CONF_fs_defaultFS=hdfs://namenode:9000
     depends_on:
       namenode:
         condition: service_healthy
       mariadb:
         condition: service_healthy
-    entrypoint: ["/usr/local/bin/hive-start.sh"]  # <- this is the key
-
+    entrypoint: ["/usr/local/bin/hive-start.sh"]
+    
 
   # --------------------------------------------------------------------------
   # MongoDB Service
