@@ -19,15 +19,15 @@ else
 fi
 
 echo "Waiting for HDFS to respond..."
-until /opt/hadoop/bin/hdfs dfs -ls / >/dev/null 2>&1; do
+until /opt/hadoop-2.7.4/bin/hdfs dfs -ls / >/dev/null 2>&1; do
   echo "HDFS not ready; retrying..."
   sleep 2
 done
 
 # Ensure warehouse dirs (retry until datanode write path is ready)
 for i in {1..30}; do
-  if HADOOP_USER_NAME=hdfs /opt/hadoop/bin/hdfs dfs -mkdir -p /user/hive/warehouse; then
-    HADOOP_USER_NAME=hdfs /opt/hadoop/bin/hdfs dfs -chmod -R 777 /user/hive || true
+  if HADOOP_USER_NAME=hdfs /opt/hadoop-2.7.4/bin/hdfs dfs -mkdir -p /user/hive/warehouse; then
+    HADOOP_USER_NAME=hdfs /opt/hadoop-2.7.4/bin/hdfs dfs -chmod -R 777 /user/hive || true
     break
   fi
   echo "HDFS mkdir failed (attempt $i). Retrying in 2s…"
