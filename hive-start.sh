@@ -2,6 +2,8 @@
 set -euo pipefail
 set -x
 
+export HIVE_CONF_DIR=/opt/hive/conf
+
 # Confirm driver jar exists
 ls -l /opt/hive/lib/mysql-connector-j-8.4.0.jar
 
@@ -21,40 +23,36 @@ $DFSADMIN -safemode wait
 
 # --- Bootstrap HDFS as superuser (root) ---
 export HADOOP_USER_NAME=root
-
-# /tmp for Hive/MapReduce
 $DFS -mkdir -p /tmp || true
 $DFS -chmod 1777 /tmp || true
-
-# **Warehouse path must match hive-site.xml**
 WAREHOUSE=/user/hive/warehouse
 $DFS -mkdir -p "$WAREHOUSE" || true
 $DFS -chmod -R 777 /user/hive || true
 $DFS -chown -R hive:supergroup /user/hive || true
-
-# (Optional scratch/external dirs)
 $DFS -mkdir -p /tmp/hive || true
 $DFS -chmod -R 1777 /tmp/hive || true
 $DFS -mkdir -p /user/hive/external || true
 $DFS -chmod -R 777 /user/hive/external || true
-
 unset HADOOP_USER_NAME
 # --- end bootstrap ---
 
-echo "Checking metastore schema..."
-if /opt/hive/bin/schematool -dbType mysql -info >/dev/null 2>&1; then
-  SCHEMA_INFO=$(/opt/hive/bin/schematool -dbType mysql -info 2>/dev/null)
-  echo "$SCHEMA_INFO"
-  if echo "$SCHEMA_INFO" | grep -qi 'version.*3\.1\.0'; then
-    echo "Metastore schema is already at 3.1.0. Skipping init."
-  else
-    echo "Metastore schema exists but is not 3.1.0. Upgrading..."
-    /opt/hive/bin/schematool -dbType mysql -upgradeSchema -verbose
-  fi
+# Make the JDBC driver visible to schematool
+export HADOOP_CLASSPATH=/opt/hive/lib/mysql-connector-j-8.4.0.jar
+
+echo "Initializing Hive metastore schema..."
+if ! /opt/hive/bin/schematool -dbType mysql -info >/dev/null 2>&1; then
+  /opt/hive/bin/schematool -dbType mysql -initSchema
 else
-  echo "No metastore schema detected. Initializing..."
-  /opt/hive/bin/schematool -dbType mysql -initSchema -verbose
+  echo "Hive schema already initialized."
 fi
 
+#Optional: silence beeline home warning
+mkdir -p /home/hive/.beeline || true
+
 echo "Starting HiveServer2..."
-exec /opt/hive/bin/hiveserver2 --hiveconf hive.root.logger=INFO,console
+exec /opt/hive/bin/hiveserver2 \
+  --hiveconf hive.root.logger=INFO,console \
+  --hiveconf hive.server2.transport.mode=binary \
+  --hiveconf hive.server2.thrift.port=10000 \
+  --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
+  --hiveconf hive.aux.jars.path=file:///opt/hive/lib/mysql-connector-j-8.4.0.jar

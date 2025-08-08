@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <configuration>
+  <!-- Metastore JDBC (yours already) -->
   <property>
     <name>javax.jdo.option.ConnectionURL</name>
     <value>jdbc:mysql://mariadb:3306/hive_metastore?createDatabaseIfNotExist=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true</value>
@@ -16,8 +16,44 @@
     <name>javax.jdo.option.ConnectionPassword</name>
     <value>hive_password</value>
   </property>
+
+  <!-- Warehouse (yours already) -->
   <property>
     <name>hive.metastore.warehouse.dir</name>
     <value>hdfs://namenode:9000/user/hive/warehouse</value>
+  </property>
+
+  <!-- **Point Hive to HDFS** -->
+  <property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://namenode:9000</value>
+  </property>
+  <property>
+    <name>hive.exec.scratchdir</name>
+    <value>hdfs://namenode:9000/tmp/hive</value>
+  </property>
+  <property>
+    <name>hive.scratch.dir.permission</name>
+    <value>733</value>
+  </property>
+
+  <!-- (Often helpful in containers) -->
+  <property>
+    <name>hive.server2.enable.doAs</name>
+    <value>false</value>
+  </property>
+
+  <!-- HS2 listener (yours already) -->
+  <property>
+    <name>hive.server2.transport.mode</name>
+    <value>binary</value>
+  </property>
+  <property>
+    <name>hive.server2.thrift.port</name>
+    <value>10000</value>
+  </property>
+  <property>
+    <name>hive.server2.thrift.bind.host</name>
+    <value>0.0.0.0</value>
   </property>
 </configuration>
