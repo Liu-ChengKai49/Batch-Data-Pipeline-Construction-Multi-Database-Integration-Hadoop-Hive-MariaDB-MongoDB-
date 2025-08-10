@@ -111,7 +111,7 @@ To support diverse consumption needs, I integrated both MariaDB and MongoDB into
 ├── sql/                     # SQL and HiveQL definitions
 ├── docker-compose.yml       # Service orchestration
 └── README.md                # Project documentation
-
+```
 ---
 
 ### 📈 Resume-Ready Summary
@@ -133,3 +133,4 @@ To support diverse consumption needs, I integrated both MariaDB and MongoDB into
 * [ ] Implement basic data validation
 * [ ] Add Grafana dashboard for monitoring
 * [ ] Write setup & usage docs in `/docs`
+
