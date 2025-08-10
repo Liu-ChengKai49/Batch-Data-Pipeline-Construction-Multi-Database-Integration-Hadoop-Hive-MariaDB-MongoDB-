@@ -33,9 +33,12 @@ I used Docker Compose to containerize and integrate key services: **Hadoop (Name
 
 ### 🗃️ Step 2: Ingesting Data into HDFS
 
-I ingested sensor data into HDFS using a staged approach to balance speed and realism.
+I ingested data into **HDFS** using a staged approach to balance speed and realism.
+
+---
 
 #### **Phase A — Quick Smoke Test (Simulated CSV)**
+
 I created a small CSV file to validate the pipeline end-to-end with zero external dependencies.
 
 * **Verified HDFS connectivity and permissions:**
@@ -44,20 +47,44 @@ I created a small CSV file to validate the pipeline end-to-end with zero externa
     hdfs dfs -put sensor_data.csv /data/sensors/
     hdfs dfs -ls /data/sensors && hdfs dfs -cat /data/sensors/sensor_data.csv
     ```
-* Confirmed replication and block layout in the HDFS Web UI (`localhost:9870`).
-* (Optional) Automated this flow via Python `hdfs` client in Jupyter.
+* Confirmed replication and block layout in the **HDFS Web UI** (`http://localhost:9870`).
+* *(Optional)* Automated this flow via Python `hdfs` client in **Jupyter**.
 
-This phase was crucial for testing Docker networking, HDFS configs, and authentication before moving on to larger datasets.
+This phase was crucial for testing **Docker networking, HDFS configurations, and authentication** before moving on to larger datasets.
 
-#### **Phase B — Real-World Ingestion (Intel Lab Sensor Data)**
-I downloaded and organized Intel Lab Sensor Data (wireless sensor network time-series).
+---
 
-* **Standardized Layout:** Structured the data into a partition-friendly layout:
-    ```swift
-    /data/sensors/dt=YYYY-MM-DD/*.csv
+#### **Phase B — Real-World Ingestion (NYC Taxi Trip Data, 2019)**
+
+I ingested the **NYC Taxi Trip Data** for the year 2019 — a large, publicly available dataset containing hundreds of millions of taxi trip records.
+
+* **Dataset Overview:**
+  - **Volume:** ~2.6 GB uncompressed CSV (~130 million rows)
+  - **Schema Highlights:** pickup/dropoff timestamps, passenger count, trip distance, fare amount, pickup/dropoff location IDs.
+
+* **Standardized Layout:** Organized the data into a **partition-friendly** directory structure for efficient querying in Hive:
+    ```bash
+    /data/taxi/year=2019/month=01/*.csv
+    /data/taxi/year=2019/month=02/*.csv
+    ...
+    /data/taxi/year=2019/month=12/*.csv
     ```
-* **Ingested to HDFS:** Used batch `hdfs dfs -put` commands and verified file counts, sizes, and replication factors with `hdfs dfs -du -h` and `hdfs dfs -stat %r`.
-* **Observed Scalability:** Scaled up file sizes to observe HDFS block splitting and confirm stable performance under larger loads.
+* **Ingested to HDFS:** Uploaded monthly CSV files using batch commands and verified ingestion:
+    ```bash
+    hdfs dfs -put yellow_tripdata_2019-*.csv /data/taxi/year=2019/
+    hdfs dfs -du -h /data/taxi/year=2019/
+    hdfs dfs -stat %r /data/taxi/year=2019/yellow_tripdata_2019-01.csv
+    ```
+* **Observed Scalability:** The dataset size allowed me to observe:
+  - **HDFS block splitting** across multiple DataNodes.
+  - **Replication behavior** in the HDFS Web UI.
+  - **Stable performance** under multi-GB ingestion.
+
+---
+
+**Why this dataset:**  
+Unlike small datasets, the NYC Taxi Trip Data provides realistic **multi-GB scale**, making it ideal for demonstrating **HDFS’s scalability**, partitioning for Hive, and real-world ETL operations.
+
 
 ---
 
@@ -133,4 +160,5 @@ To support diverse consumption needs, I integrated both MariaDB and MongoDB into
 * [ ] Implement basic data validation
 * [ ] Add Grafana dashboard for monitoring
 * [ ] Write setup & usage docs in `/docs`
+
 
