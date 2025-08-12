@@ -48,7 +48,7 @@ I created a small CSV file to validate the pipeline end-to-end with zero externa
     hdfs dfs -ls /data/sensors && hdfs dfs -cat /data/sensors/sensor_data.csv
     ```
 * Confirmed replication and block layout in the **HDFS Web UI** (`http://localhost:9870`).
-* *(Optional)* Automated this flow via Python `hdfs` client in **Jupyter**.
+* Automated this flow via Python `hdfs` client in **Jupyter**.
 
 This phase was crucial for testing **Docker networking, HDFS configurations, and authentication** before moving on to larger datasets.
 
@@ -160,5 +160,6 @@ To support diverse consumption needs, I integrated both MariaDB and MongoDB into
 * [ ] Implement basic data validation
 * [ ] Add Grafana dashboard for monitoring
 * [ ] Write setup & usage docs in `/docs`
+
 
 
