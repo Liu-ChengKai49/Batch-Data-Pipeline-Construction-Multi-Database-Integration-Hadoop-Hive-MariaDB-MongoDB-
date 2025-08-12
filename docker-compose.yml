@@ -16,9 +16,10 @@ services:
     volumes:
       - namenode-data:/hadoop/dfs/name
     environment:
-      - CLUSTER_NAME=test-cluster
-      - HDFS_USER=hdfs
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    - CLUSTER_NAME=test-cluster
+    - HDFS_USER=hdfs
+    - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    - HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check=false
     env_file:
       - ./hadoop.env
     networks:
@@ -39,10 +40,14 @@ services:
     container_name: datanode
     volumes:
       - datanode-data:/hadoop/dfs/data
+      # - ./core-site.xml:/opt/hadoop-3.2.1/etc/hadoop/core-site.xml:ro
+      # - ./hdfs-site.xml:/opt/hadoop-3.2.1/etc/hadoop/hdfs-site.xml:ro
     environment:
       - CLUSTER_NAME=test-cluster
       - HDFS_USER=hdfs
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_CONF_dfs_datanode_hostname=datanode
+      - HDFS_CONF_dfs_datanode_use_datanode_hostname=true
     env_file:
       - ./hadoop.env
     networks:
