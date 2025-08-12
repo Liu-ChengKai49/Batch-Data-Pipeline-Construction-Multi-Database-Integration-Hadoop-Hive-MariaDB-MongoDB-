@@ -151,7 +151,10 @@ services:
     ports:
       - "8888:8888"
     volumes:
+      # Mount the local notebooks directory
       - ./notebooks:/home/jovyan/work
+      # Add this line to mount your local data directory
+      - ./data:/home/jovyan/work/data
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - GRANT_SUDO=yes
