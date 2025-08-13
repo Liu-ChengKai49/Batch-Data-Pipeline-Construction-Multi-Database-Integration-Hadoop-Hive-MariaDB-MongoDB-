@@ -1,0 +1,68 @@
+[33m> b85946f[m[33m ([m[1;31morigin/feature/step2b-nyc-taxi-data[m[33m)[m Update README.md
+[33m< a18ce7d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/step2b-nyc-taxi-data[m[33m)[m chore: update .gitignore to exclude NYC taxi datasets and large files
+[33m< 056e176[m chore: ignore datasets (parquet/csv) and nyc-taxi directory
+[33m< cf777d3[m Stop tracking large dataset; ignore parquet/CSV data
+[33m< 79e585b[m Add Jupyter notebooks for HDFS integration and NYC taxi data uploads
+[33m< 0a8c28d[m Add scripts to download and organize NYC taxi trip data for 2019
+[33m< c020398[m Update README.md
+[33m> 13f7c8d[m Add volume mounts for local notebooks and data directories in JupyterLab service
+[33m< 7966723[m[33m ([m[1;31morigin/feature/step2a-smoke-test[m[33m, [m[1;32mfeature/step2a-smoke-test[m[33m)[m Add volume mounts for local notebooks and data directories in JupyterLab service
+[33m> be98dfb[m Refactor Hadoop configuration in docker-compose.yml to improve clarity and add missing environment variables
+[33m< 89858c6[m[33m ([m[1;31morigin/fix/hdfs-datanode-9866[m[33m, [m[1;32mfix/hdfs-datanode-9866[m[33m)[m Refactor Hadoop configuration in docker-compose.yml to improve clarity and add missing environment variables
+[33m< 8af14db[m Add initial sensor data CSV file with temperature and pressure readings
+[33m> 64c6595[m Update README.md
+[33m< 9387c38[m[33m ([m[1;31morigin/feature/hdfs-ingestion-step2[m[33m, [m[1;32mfeature/hdfs-ingestion-step2[m[33m)[m Update README.md
+[33m> 737d71b[m Update README.md
+[33m< 26c31bb[m Update README.md
+[33m> 6a1ebaf[m Update README.md
+[33m< ec38c33[m Update README.md
+[33m> 82685d4[m Comment out the docker logs command in note.md
+[33m< 6cfc591[m[33m ([m[1;31morigin/develop[m[33m, [m[1;32mdevelop[m[33m)[m Comment out the docker logs command in note.md
+[33m> 6e08641[m Update note.md to add line number for clarity
+[33m< 4af476b[m Update note.md to add line number for clarity
+[33m> 94821a5[m Update note.md
+[33m< 72415bb[m Update note.md
+[33m> 167a815[m Update note.md
+[33m< f8666dc[m Update note.md
+[33m> c5aa8b8[m Add placeholder line to note.md
+[33m< b32edbb[m Add placeholder line to note.md
+[33m> 5c98f93[m Add additional logging command and placeholder in note.md
+[33m< 0e4d838[m Add additional logging command and placeholder in note.md
+[33m> 86c066e[m Update note.md
+[33m< 2fa014d[m Update note.md
+[33m> 4502a63[m Add initial Docker commands for managing Hive server
+[33m< 3e07bb4[m Add initial Docker commands for managing Hive server
+[33m> f20c4c6[m Remove deprecated MariaDB Java client JAR file
+[33m< c39ffd0[m[33m ([m[1;32mmain[m[33m)[m Remove deprecated MariaDB Java client JAR file
+[33m> 7c60def[m Add initial configuration files for Hadoop MapReduce and YARN
+[33m< 030ada7[m Add initial configuration files for Hadoop MapReduce and YARN
+[33m> 5c27cf2[m Refactor Hive service healthcheck to use netcat for port verification and adjust timing parameters for improved responsiveness
+[33m< 90e1904[m Refactor Hive service healthcheck to use netcat for port verification and adjust timing parameters for improved responsiveness
+[33m> ab01d01[m Update healthcheck for Hive service and refactor HDFS commands in startup script for improved reliability
+[33m< 665ba5a[m Update healthcheck for Hive service and refactor HDFS commands in startup script for improved reliability
+[33m> a714f53[m Enhance Hive configuration and startup scripts for improved functionality and reliability
+[33m< dce372b[m Enhance Hive configuration and startup scripts for improved functionality and reliability
+[33m> d2b7343[m Refactor hive-start.sh to simplify JDBC driver check and improve HDFS readiness logic
+[33m< df0459d[m Refactor hive-start.sh to simplify JDBC driver check and improve HDFS readiness logic
+[33m> 7353ae4[m Add healthcheck for Hive service using netcat to verify port availability
+[33m< 0920784[m Add healthcheck for Hive service using netcat to verify port availability
+[33m> c869dc6[m Fix HDFS command paths in hive-start.sh for consistency with Hadoop version
+[33m< d390ccd[m Fix HDFS command paths in hive-start.sh for consistency with Hadoop version
+[33m> 9f73869[m Refactor code structure for improved readability and maintainability
+[33m< 91c4a4b[m Refactor code structure for improved readability and maintainability
+[33m> cd4b534[m Refactor code structure for improved readability and maintainability
+[33m< 10c226e[m Refactor code structure for improved readability and maintainability
+[33m> 0a2f450[m Update healthcheck command for Hive Metastore service to use netcat for port availability check
+[33m< 7bfcc59[m[33m ([m[1;31morigin/feature/postgres-metastore[m[33m, [m[1;32mfeature/postgres-metastore[m[33m)[m Update healthcheck command for Hive Metastore service to use netcat for port availability check
+[33m> 7ad73b9[m Update docker-compose.yml to replace MariaDB with PostgreSQL for Hive Metastore and adjust related configurations; add new hive-start.sh script for initialization and connection setup.
+[33m< 8a63da1[m Update docker-compose.yml to replace MariaDB with PostgreSQL for Hive Metastore and adjust related configurations; add new hive-start.sh script for initialization and connection setup.
+[33m> c0f81d9[m Update README.md and docker-compose.yml for improved clarity and structure
+[33m< 612aa62[m Update README.md and docker-compose.yml for improved clarity and structure
+[33m> 98ff6f3[m Clarify description of Docker Compose usage in README.md to emphasize reproducible data engineering environment
+[33m< 142b6a3[m Clarify description of Docker Compose usage in README.md to emphasize reproducible data engineering environment
+[33m> ce3082c[m Add initial docker-compose.yml file
+[33m< 1256755[m Add initial docker-compose.yml file
+[33m> 20334ca[m Update README.md
+[33m< 8249541[m Update README.md
+[33m> f9c925f[m Initial commit
+[33m< 202583e[m Initial commit
