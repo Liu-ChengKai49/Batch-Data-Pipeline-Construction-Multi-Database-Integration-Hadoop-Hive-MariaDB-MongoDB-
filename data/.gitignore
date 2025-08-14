@@ -1,4 +1,3 @@
-# --- Datasets (keep out of Git) ---
-data/**/nyc-taxi/
+data/nyc-taxi/
 *.parquet
 *.csv
