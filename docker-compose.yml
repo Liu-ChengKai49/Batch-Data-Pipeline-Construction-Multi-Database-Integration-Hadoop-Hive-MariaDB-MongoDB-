@@ -100,6 +100,8 @@ services:
     environment:
       HIVE_CONF_DIR: /opt/hive/conf
       HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
+      HIVE_SERVER2_HEAPSIZE: 6144              # <- add this
+      HADOOP_CLIENT_OPTS: "-Xmx4g"             # <- also boost client JVM heap
     networks:
       - big-data-net
     depends_on:
