@@ -1,10 +1,8 @@
 docker restart hive-server
 
-
+docker exec -it jupyterlab bash
 
 docker exec -it hive-server bash
-
-# In the Hive container or via beeline
 beeline -u jdbc:hive2://hive-server:10000
 
 CREATE DATABASE IF NOT EXISTS taxi_db;
