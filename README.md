@@ -97,20 +97,32 @@ To transform raw HDFS data into a structured, queryable format, I created **exte
     * Executed filtering, aggregation, and partitioning in Hive.
     * Learned how Hive abstracts MapReduce with SQL syntax.
 
+
+
+
+
 ---
 
 ### 🔄 Step 4: Storing in MariaDB (SQL) & MongoDB (NoSQL)
 
-To support diverse consumption needs, I integrated both MariaDB and MongoDB into the pipeline.
+To support diverse consumption needs, I built and executed a **complete ETL process** that moves data from Hive/HDFS into relational and document databases for fast, purpose-built querying.
 
 * **MariaDB (Structured Analytics):**
-    * Defined relational schemas.
-    * Loaded Hive outputs via Python (`pymysql`).
-    * Ran basic SQL queries for validation.
+
+  * Designed a relational schema (`taxi_monthly_summary`) for aggregated analytics.
+  * **Extracted** pre-aggregated data from Hive using Python (`pyhive`).
+  * **Transformed** data in Hive with SQL (filtering, grouping, NULL handling).
+  * **Loaded** results into MariaDB using Python (`pymysql`) with batched, idempotent upserts.
+  * Validated loads with basic SQL queries and added indexes for fast retrieval.
+
 * **MongoDB (Flexible Log Storage):**
-    * Modeled documents with nested fields.
-    * Loaded raw logs via `pymongo`.
-    * Used `insert_many`, `find`, and `create_index` for operations.
+
+  * Modeled semi-structured logs as nested JSON documents.
+  * **Extracted** raw records from source files.
+  * **Transformed** minimal fields for document consistency.
+  * **Loaded** documents into MongoDB via Python (`pymongo`) using `insert_many`.
+  * Created indexes and ran `find` queries to confirm data integrity and query performance.
+
 
 ---
 
@@ -160,6 +172,7 @@ To support diverse consumption needs, I integrated both MariaDB and MongoDB into
 * [ ] Implement basic data validation
 * [ ] Add Grafana dashboard for monitoring
 * [ ] Write setup & usage docs in `/docs`
+
 
 
 
