@@ -72,3 +72,10 @@ ORDER BY passenger_count;
 
 
 
+
+# If your container is named "mongodb"
+docker exec -it mongodb mongosh -u mongouser -p mongopassword --authenticationDatabase admin
+
+
+
+
