@@ -140,16 +140,28 @@ To support diverse consumption needs, I built and executed a **complete ETL proc
 ## 📁 Repository Structure
 
 ```graphql
-├── data/                    # Sample or raw datasets
-├── hdfs/                    # HDFS mount
-├── hive/                    # HiveQL scripts
-├── scripts/                 # Python ETL scripts
-├── mariadb/                 # SQL init scripts
-├── mongodb/                 # NoSQL loading scripts
-├── notebooks/               # Jupyter notebooks
-├── sql/                     # SQL and HiveQL definitions
-├── docker-compose.yml       # Service orchestration
-└── README.md                # Project documentation
+├── README.md                  # project overview & runbook
+├── docker-compose.yml         # service orchestration
+├── hive-start.sh              # Hive entry script
+├── mysql-connector-j-8.x.jar  # JDBC driver
+├── note.md                    # scratch notes
+
+├── data/                      # datasets
+
+├── hadoop-conf/               # configs
+│   ├── core-site.xml
+│   ├── hdfs-site.xml
+│   ├── hive-site.xml          # (move here from root)
+│   └── hadoop.env             # (move here from root)
+
+├── notebooks/                 # Jupyter notebooks
+│   ├── feature_step2a-smoke-test.ipynb
+│   ├── feature_step2b-nyc-taxi-data .ipynb
+│   ├── feature_step3-hive-structuring.ipynb
+│   ├── feature_step4-mariadb-storage.ipynb
+│   └── feature_step4-mongodb-storage.ipynb
+
+
 ```
 ---
 
@@ -172,6 +184,8 @@ To support diverse consumption needs, I built and executed a **complete ETL proc
 * [ ] Implement basic data validation
 * [ ] Add Grafana dashboard for monitoring
 * [ ] Write setup & usage docs in `/docs`
+
+
 
 
 
