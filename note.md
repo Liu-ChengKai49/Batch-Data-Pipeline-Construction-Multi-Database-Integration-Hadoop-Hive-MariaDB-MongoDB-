@@ -1,3 +1,7 @@
+docker compose down
+docker compose up -d
+
+
 docker restart hive-server
 
 docker exec -it jupyterlab bash
@@ -38,6 +42,9 @@ FROM yellow_taxi
 WHERE year='2019' AND month='01'
 LIMIT 10;
 
+SELECT COUNT(*)   
+FROM yellow_taxi
+WHERE year='2019';
 
 WITH base AS (
   SELECT *
@@ -76,6 +83,6 @@ ORDER BY passenger_count;
 # If your container is named "mongodb"
 docker exec -it mongodb mongosh -u mongouser -p mongopassword --authenticationDatabase admin
 
-
+use taxi_logs
 
 
