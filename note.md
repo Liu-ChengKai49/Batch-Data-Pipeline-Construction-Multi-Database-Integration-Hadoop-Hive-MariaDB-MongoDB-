@@ -9,8 +9,38 @@ docker exec -it jupyterlab bash
 docker exec -it hive-server bash
 beeline -u jdbc:hive2://hive-server:10000
 
-DROP VIEW IF EXISTS yellow_taxi;
+CREATE EXTERNAL TABLE IF NOT EXISTS yellow_taxi_raw (
+  VendorID                 INT,
+  tpep_pickup_datetime     BIGINT,     -- epoch µs (per your view); change to TIMESTAMP if already timestamp
+  tpep_dropoff_datetime    BIGINT,     -- epoch µs
+  passenger_count          INT,
+  trip_distance            DOUBLE,
+  RatecodeID               INT,
+  store_and_fwd_flag       STRING,
+  PULocationID             INT,
+  DOLocationID             INT,
+  payment_type             INT,
+  fare_amount              DOUBLE,
+  extra                    DOUBLE,
+  mta_tax                  DOUBLE,
+  tip_amount               DOUBLE,
+  tolls_amount             DOUBLE,
+  improvement_surcharge    DOUBLE,
+  total_amount             DOUBLE,
+  congestion_surcharge     DOUBLE
+)
+PARTITIONED BY (year STRING, month STRING)
+STORED AS PARQUET
+LOCATION "/data/taxi";
 
+-- Discover partitions on HDFS
+MSCK REPAIR TABLE yellow_taxi_raw;
+
+-- Optional: peek
+SHOW PARTITIONS yellow_taxi_raw;
+
+<!-- -- Create the view exactly as you want
+DROP VIEW IF EXISTS yellow_taxi;
 CREATE VIEW yellow_taxi AS
 SELECT
   VendorID,
@@ -34,6 +64,74 @@ SELECT
   year,
   month
 FROM yellow_taxi_raw;
+
+DROP VIEW IF EXISTS yellow_taxi; -->
+
+<!-- CREATE VIEW yellow_taxi AS
+SELECT
+  VendorID,
+  -- microseconds → seconds via integer division (no floating point)
+  FROM_UNIXTIME( CAST(tpep_pickup_datetime  DIV 1000000 AS BIGINT) ) AS tpep_pickup_datetime,
+  FROM_UNIXTIME( CAST(tpep_dropoff_datetime DIV 1000000 AS BIGINT) ) AS tpep_dropoff_datetime,
+  passenger_count,
+  trip_distance,
+  RatecodeID,
+  store_and_fwd_flag,
+  PULocationID,
+  DOLocationID,
+  payment_type,
+  fare_amount,
+  extra,
+  mta_tax,
+  tip_amount,
+  tolls_amount,
+  improvement_surcharge,
+  total_amount,
+  congestion_surcharge,
+  year,
+  month
+FROM default.yellow_taxi_raw; -->
+
+DROP VIEW IF EXISTS yellow_taxi;
+
+CREATE VIEW yellow_taxi AS
+SELECT
+  vendorid AS VendorID,
+
+  -- microseconds -> seconds (integer), clamp 2000..2030, cast to TIMESTAMP
+  CASE
+    WHEN (tpep_pickup_datetime  DIV 1000000) BETWEEN 946684800 AND 1893456000
+      THEN CAST(FROM_UNIXTIME(CAST(tpep_pickup_datetime  DIV 1000000 AS BIGINT)) AS TIMESTAMP)
+    ELSE NULL
+  END AS tpep_pickup_datetime,
+
+  CASE
+    WHEN (tpep_dropoff_datetime DIV 1000000) BETWEEN 946684800 AND 1893456000
+      THEN CAST(FROM_UNIXTIME(CAST(tpep_dropoff_datetime DIV 1000000 AS BIGINT)) AS TIMESTAMP)
+    ELSE NULL
+  END AS tpep_dropoff_datetime,
+
+  passenger_count,
+  trip_distance,
+  ratecodeid      AS RatecodeID,
+  store_and_fwd_flag,
+  pulocationid    AS PULocationID,
+  dolocationid    AS DOLocationID,
+  payment_type,
+  fare_amount,
+  extra,
+  mta_tax,
+  tip_amount,
+  tolls_amount,
+  improvement_surcharge,
+  total_amount,
+  congestion_surcharge,
+  year, month
+FROM default.yellow_taxi_raw;
+
+
+-- Quick smoke test
+SELECT COUNT(*) AS n FROM yellow_taxi LIMIT 1;
 
 SELECT
   CAST(tpep_pickup_datetime  AS STRING) AS pickup,
