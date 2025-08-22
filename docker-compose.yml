@@ -76,11 +76,15 @@ services:
     command: >
       bash -lc '
         set -e
-        # Wait until NameNode leaves safemode
         hdfs dfsadmin -safemode wait
-        # Create temp/warehouse dirs (idempotent) and set sticky perms
-        hdfs dfs -mkdir -p /tmp /tmp/hive /user/hive/warehouse
-        hdfs dfs -chmod 1777 /tmp /tmp/hive /user/hive/warehouse
+        # HDFS temp + warehouse
+        hdfs dfs -mkdir -p /tmp /tmp/hive /user/hive /user/hive/warehouse
+        hdfs dfs -chmod 1777 /tmp /tmp/hive
+        # MR staging for user "hive"
+        hdfs dfs -mkdir -p /user/hive/.staging
+        hdfs dfs -chown -R hive:supergroup /user/hive
+        hdfs dfs -chmod 775 /user/hive /user/hive/warehouse
+        hdfs dfs -chmod 700 /user/hive/.staging
         echo "HDFS bootstrap done."
       '
   # --------------------------------------------------------------------------
@@ -147,11 +151,13 @@ services:
       start_period: 150s
     command: >
       bash -lc '
-        # local scratch for HS2 (optional but nice)
-        mkdir -p /tmp/hive && chmod 1777 /tmp/hive
+        # local scratch for MR/HS2
+        mkdir -p /tmp/mapred/local /tmp/hadoop-hive /tmp/hive
+        chmod -R 777 /tmp/mapred /tmp/hadoop-hive /tmp/hive
+        mkdir -p /home/hive && chown -R hive:hive /home/hive
         export HOME=/tmp
         /opt/hive/bin/hiveserver2
-      '  
+      '
     entrypoint: ["/usr/local/bin/hive-start.sh"]
     
     
