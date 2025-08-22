@@ -56,7 +56,33 @@ services:
       namenode:
         condition: service_healthy
     mem_limit: 2g
-
+  hdfs-bootstrap:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8  # has hdfs cli
+    hostname: hdfs-bootstrap
+    container_name: hdfs-bootstrap
+    networks:
+      - big-data-net
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_USER=hdfs
+    env_file:
+      - ./hadoop.env
+    depends_on:
+      namenode:
+        condition: service_healthy
+      datanode:
+        condition: service_healthy
+    restart: "no"
+    command: >
+      bash -lc '
+        set -e
+        # Wait until NameNode leaves safemode
+        hdfs dfsadmin -safemode wait
+        # Create temp/warehouse dirs (idempotent) and set sticky perms
+        hdfs dfs -mkdir -p /tmp /tmp/hive /user/hive/warehouse
+        hdfs dfs -chmod 1777 /tmp /tmp/hive /user/hive/warehouse
+        echo "HDFS bootstrap done."
+      '
   # --------------------------------------------------------------------------
   # MariaDB Service (New Hive Metastore)
   # --------------------------------------------------------------------------
@@ -111,6 +137,8 @@ services:
         condition: service_healthy
       mariadb:
         condition: service_healthy
+      hdfs-bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "/opt/hive/bin/beeline -u 'jdbc:hive2://127.0.0.1:10000/' -n hive -e 'show databases' >/dev/null 2>&1 || exit 1"]
       interval: 30s
@@ -119,11 +147,11 @@ services:
       start_period: 150s
     command: >
       bash -lc '
-        hdfs dfs -mkdir -p /tmp/hive || true &&
-        hdfs dfs -chmod 1777 /tmp/hive || true &&
-        mkdir -p /tmp/hive && chmod 1777 /tmp/hive &&
+        # local scratch for HS2 (optional but nice)
+        mkdir -p /tmp/hive && chmod 1777 /tmp/hive
+        export HOME=/tmp
         /opt/hive/bin/hiveserver2
-      '    
+      '  
     entrypoint: ["/usr/local/bin/hive-start.sh"]
     
     
