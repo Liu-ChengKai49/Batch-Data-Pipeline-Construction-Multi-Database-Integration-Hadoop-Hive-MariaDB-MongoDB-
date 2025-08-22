@@ -117,7 +117,13 @@ services:
       timeout: 30s
       retries: 10
       start_period: 150s
-
+    command: >
+      bash -lc '
+        hdfs dfs -mkdir -p /tmp/hive || true &&
+        hdfs dfs -chmod 1777 /tmp/hive || true &&
+        mkdir -p /tmp/hive && chmod 1777 /tmp/hive &&
+        /opt/hive/bin/hiveserver2
+      '    
     entrypoint: ["/usr/local/bin/hive-start.sh"]
     
     
