@@ -67,6 +67,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
+      - /mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dq:/opt/dq:ro
       - mariadb-data:/var/lib/mysql
     environment:
       - MARIADB_ROOT_PASSWORD=your_root_password
@@ -93,6 +94,7 @@ services:
       - "10000:10000"
       - "9083:9083"
     volumes:
+      - /mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dq:/opt/dq:ro
       - ./hive-start.sh:/usr/local/bin/hive-start.sh:ro
       - ./hive-site.xml:/opt/hive/conf/hive-site.xml:ro
       - ./mysql-connector-j-8.4.0.jar:/opt/hive/lib/mysql-connector-j-8.4.0.jar:ro
