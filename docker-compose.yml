@@ -1,6 +1,6 @@
 # docker-compose.yml
 
-version: '3.8'
+# version: '3.8'
 
 services:
   # --------------------------------------------------------------------------
@@ -100,7 +100,7 @@ services:
       - /mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dq:/opt/dq:ro
       - mariadb-data:/var/lib/mysql
     environment:
-      - MARIADB_ROOT_PASSWORD=your_root_password
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MARIADB_DATABASE=hive_metastore
       - MARIADB_USER=hive
       - MARIADB_PASSWORD=hive_password
@@ -112,6 +112,22 @@ services:
       timeout: 5s
       retries: 5
     mem_limit: 512m
+  mariadb-bootstrap:
+    image: mariadb:10.6
+    container_name: mariadb-bootstrap
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}   # repeat here (or use an env_file)
+    volumes:
+      - ./docker/mariadb-init:/init:ro
+    command: >
+      bash -lc '
+        cat /init/10_dw.sql | mysql -hmariadb -uroot -p"$MARIADB_ROOT_PASSWORD"
+      '
+    restart: "no"
+    networks: [big-data-net]
 
   # --------------------------------------------------------------------------
   # Hive Service (Metastore and HiveServer2)
@@ -229,6 +245,116 @@ services:
         condition: service_healthy
     mem_limit: 1.5g
     command: start-notebook.sh --NotebookApp.token='' --NotebookApp.allow_origin='*'
+  airflow-db:
+    image: postgres:14
+    container_name: airflow-db
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports: ["5434:5432"]
+    networks: [big-data-net]
+    healthcheck:
+      # NOTE: use $$ so compose passes $ through to the container
+      test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: airflow-webserver
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW_UID: "${AIRFLOW_UID}"
+      # Connections
+      AIRFLOW_CONN_HIVE_DEFAULT: "hive://hive-server:10000/default?auth=NOSASL"
+      # FIX B: match your MariaDB creds & DB (see below)
+      AIRFLOW_CONN_MARIADB_DEFAULT: "mysql://root:your_root_password@mariadb:3306/taxi_dw"
+      # Optional lineage
+      AIRFLOW__OPENLINEAGE__NAMESPACE: "dev"
+      AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"http","url":"http://marquez:5000"}'
+    volumes:
+      - "/mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dags:/opt/airflow/dags"
+      - ./dq:/opt/airflow/dq
+      - airflow_logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports: ["8081:8080"]
+    command: webserver
+    networks: [big-data-net]
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: airflow-scheduler
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW_UID: "${AIRFLOW_UID}"
+      AIRFLOW_CONN_HIVE_DEFAULT: "hive://hive-server:10000/default?auth=NOSASL"
+      AIRFLOW_CONN_MARIADB_DEFAULT: "mysql://root:your_root_password@mariadb:3306/taxi_dw"
+      AIRFLOW__OPENLINEAGE__NAMESPACE: "dev"
+      AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"http","url":"http://marquez:5000"}'
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./dq:/opt/airflow/dq
+      - airflow_logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: scheduler
+    networks: [big-data-net]
+  airflow-init:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: airflow-init
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW__CORE__FERNET_KEY}"
+      _AIRFLOW_WWW_USER_USERNAME: "${_AIRFLOW_WWW_USER_USERNAME}"
+      _AIRFLOW_WWW_USER_PASSWORD: "${_AIRFLOW_WWW_USER_PASSWORD}"
+      AIRFLOW_CONN_HIVE_DEFAULT: "${AIRFLOW_CONN_HIVE_DEFAULT}"
+      AIRFLOW_CONN_MARIADB_DEFAULT: "${AIRFLOW_CONN_MARIADB_DEFAULT}"
+    command: >
+      bash -lc "
+        set -euo pipefail
+        echo '==> DB migrate'
+        airflow db migrate
+
+        echo '==> Ensure admin user'
+        if airflow users list --output json | python -c \"import sys,json,os; u=os.environ.get('_AIRFLOW_WWW_USER_USERNAME','admin'); sys.exit(0 if any(x.get('username')==u for x in json.load(sys.stdin)) else 1)\"; then
+          echo 'User exists'
+        else
+          airflow users create --username \"$_AIRFLOW_WWW_USER_USERNAME\" --password \"$_AIRFLOW_WWW_USER_PASSWORD\" --firstname Admin --lastname User --role Admin --email admin@example.com
+        fi
+
+        echo '==> Ensure connections'
+        airflow connections get hive_default >/dev/null 2>&1 && airflow connections delete hive_default || true
+        airflow connections add hive_default --conn-uri \"$AIRFLOW_CONN_HIVE_DEFAULT\"
+
+        airflow connections get mariadb_default >/dev/null 2>&1 && airflow connections delete mariadb_default || true
+        airflow connections add mariadb_default --conn-uri \"$AIRFLOW_CONN_MARIADB_DEFAULT\"
+      "
+    restart: "no"
+    networks: [big-data-net]
 
 # --------------------------------------------------------------------------
 # Docker Volumes for Persistent Data
@@ -238,6 +364,8 @@ volumes:
   datanode-data:
   mariadb-data:
   mongodb-data:
+  airflow_logs:
+
 
 # --------------------------------------------------------------------------
 # Docker Network for Inter-Service Communication
