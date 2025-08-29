@@ -288,6 +288,8 @@ services:
       - ./dq:/opt/airflow/dq
       - airflow_logs:/opt/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID}"
     ports: ["8081:8080"]
     command: webserver
     networks: [big-data-net]
@@ -311,6 +313,8 @@ services:
       AIRFLOW_CONN_MARIADB_DEFAULT: "mysql://root:your_root_password@mariadb:3306/analytics"
       AIRFLOW__OPENLINEAGE__NAMESPACE: "dev"
       AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"http","url":"http://marquez:5000"}'
+    group_add:
+      - "${DOCKER_GID}"      
     volumes:
       - /mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dags:/opt/airflow/dags
       - ./dq:/opt/airflow/dq
