@@ -277,9 +277,9 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW_UID: "${AIRFLOW_UID}"
       # Connections
-      AIRFLOW_CONN_HIVE_DEFAULT: "hive://hive-server:10000/default?auth=NOSASL"
+      AIRFLOW_CONN_HIVE_DEFAULT: "hive://hive-server:10000/"
       # FIX B: match your MariaDB creds & DB (see below)
-      AIRFLOW_CONN_MARIADB_DEFAULT: "mysql://root:your_root_password@mariadb:3306/taxi_dw"
+      AIRFLOW_CONN_MARIADB_DEFAULT: "mysql://root:your_root_password@mariadb:3306/analytics"
       # Optional lineage
       AIRFLOW__OPENLINEAGE__NAMESPACE: "dev"
       AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"http","url":"http://marquez:5000"}'
@@ -307,12 +307,12 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW_UID: "${AIRFLOW_UID}"
-      AIRFLOW_CONN_HIVE_DEFAULT: "hive://hive-server:10000/default?auth=NOSASL"
-      AIRFLOW_CONN_MARIADB_DEFAULT: "mysql://root:your_root_password@mariadb:3306/taxi_dw"
+      AIRFLOW_CONN_HIVE_DEFAULT: "hive://hive-server:10000/"
+      AIRFLOW_CONN_MARIADB_DEFAULT: "mysql://root:your_root_password@mariadb:3306/analytics"
       AIRFLOW__OPENLINEAGE__NAMESPACE: "dev"
       AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"http","url":"http://marquez:5000"}'
     volumes:
-      - ./dags:/opt/airflow/dags
+      - /mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dags:/opt/airflow/dags
       - ./dq:/opt/airflow/dq
       - airflow_logs:/opt/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
