@@ -360,6 +360,53 @@ services:
     restart: "no"
     networks: [big-data-net]
 
+  marquez-db:
+    image: postgres:14
+    container_name: marquez-db
+    env_file: [.env]
+    ports: ["5433:5432"]         # host:container; avoid conflicts with local Postgres
+    networks:
+      big-data-net:
+        aliases:
+          - postgres    # so 'postgres:5432' resolves inside the compose network
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  marquez:
+    image: marquezproject/marquez:0.50.0
+    container_name: marquez
+    depends_on:
+      marquez-db:
+        condition: service_healthy
+    env_file: [.env]
+    ports:
+      - "5000:5000"   # API
+      - "5001:5001"   # admin (healthcheck/metrics)
+    networks: [big-data-net]
+    healthcheck:
+      test: ["CMD","curl","-sf","http://localhost:5000/api/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  marquez-web:
+    image: marquezproject/marquez-web:0.50.0   # pin a matching tag
+    environment:
+      - WEB_PORT=3000
+      - MARQUEZ_BASE_URL=http://marquez:5000   # keep both styles for safety
+      - MARQUEZ_HOST=marquez
+      - MARQUEZ_PORT=5000
+    depends_on:
+      - marquez
+        # condition: service_healthy
+    ports:
+      - "3000:3000"   # change to 3001:3000 if 3000 is busy
+    networks:
+      - big-data-net
+
 # --------------------------------------------------------------------------
 # Docker Volumes for Persistent Data
 # --------------------------------------------------------------------------
