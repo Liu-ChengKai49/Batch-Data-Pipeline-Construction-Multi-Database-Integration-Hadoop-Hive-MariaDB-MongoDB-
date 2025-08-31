@@ -1,6 +1,7 @@
 docker compose down
 docker compose build
 docker compose up -d
+<!-- docker compose --profile control up -d -->
 
 
 docker restart hive-server

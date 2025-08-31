@@ -1,0 +1,17 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+    - containerPort: 30000  # Airflow -> 8081
+      hostPort: 8081
+      protocol: TCP
+    - containerPort: 30001  # Marquez Web -> 3000
+      hostPort: 3000
+      protocol: TCP
+    - containerPort: 30002  # Marquez API -> 5000
+      hostPort: 5000
+      protocol: TCP
+    - containerPort: 30003  # Marquez Admin/Health -> 5001
+      hostPort: 5001
+      protocol: TCP

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: airflow-scheduler }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: airflow-scheduler } }
+  template:
+    metadata: { labels: { app: airflow-scheduler } }
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: airflow-local:step7
+          command: ["bash","-lc","until (</dev/tcp/airflow-postgres/5432) >/dev/null 2>&1; do echo 'waiting for postgres'; sleep 2; done"]
+      containers:
+      - name: sched
+        image: airflow-local:step7
+        command: ["bash","-lc","airflow scheduler"]
+        envFrom:
+          - configMapRef: { name: airflow-env }
+          - secretRef:    { name: airflow-secrets }
+        resources:
+          requests: { cpu: "300m", memory: "512Mi" }
+          limits:   { cpu: "1",    memory: "1Gi" }

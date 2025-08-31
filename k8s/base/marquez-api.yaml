@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: marquez-api }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: marquez-api } }
+  template:
+    metadata: { labels: { app: marquez-api } }
+    spec:
+      initContainers:
+        - name: wait-for-marquez-db
+          image: busybox:1.36
+          command: ["sh","-c","until nc -z marquez-db 5432; do echo 'waiting for marquez db'; sleep 2; done"]
+      containers:
+      - name: api
+        image: marquezproject/marquez:0.50.0
+        env:
+          - name: MARQUEZ_CONFIG
+            value: /etc/marquez/config.yml        
+        envFrom:
+          - configMapRef: { name: marquez-env }
+          - secretRef:    { name: pg-marquez-secrets }
+        ports: [{ containerPort: 5000, name: api }, { containerPort: 5001, name: admin }]
+        volumeMounts:
+          - name: marquez-config
+            mountPath: /etc/marquez
+            readOnly: true
+      volumes:
+        - name: marquez-config
+          configMap:
+            name: marquez-config
+
+---
+apiVersion: v1
+kind: Service
+metadata: { name: marquez-api }
+spec:
+  selector: { app: marquez-api }
+  type: NodePort
+  ports:
+    - name: api
+      port: 5000
+      targetPort: api
+      nodePort: 30002   # host 5000
+    - name: admin
+      port: 5001
+      targetPort: admin
+      nodePort: 30003   # host 5001

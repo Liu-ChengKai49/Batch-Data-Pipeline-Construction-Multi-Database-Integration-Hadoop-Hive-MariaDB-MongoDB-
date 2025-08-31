@@ -8,3 +8,6 @@ USER airflow
 RUN pip install --no-cache-dir \
     pymysql \
     openlineage-airflow==1.36.0
+
+COPY dags/ /opt/airflow/dags/
+COPY dq/   /opt/airflow/dq/

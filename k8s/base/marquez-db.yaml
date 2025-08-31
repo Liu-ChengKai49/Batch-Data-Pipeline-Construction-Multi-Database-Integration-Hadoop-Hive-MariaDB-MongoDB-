@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: marquez-db }
+spec:
+  serviceName: marquez-db
+  replicas: 1
+  selector: { matchLabels: { app: marquez-db } }
+  template:
+    metadata: { labels: { app: marquez-db } }
+    spec:
+      containers:
+      - name: db
+        image: postgres:14
+        envFrom: [ { secretRef: { name: pg-marquez-secrets } } ]
+        ports: [ { containerPort: 5432, name: pg } ]
+        volumeMounts: [ { name: data, mountPath: /var/lib/postgresql/data } ]
+  volumeClaimTemplates:
+  - metadata: { name: data }
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources: { requests: { storage: 2Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: marquez-db }
+spec:
+  selector: { app: marquez-db }
+  ports: [ { port: 5432, targetPort: pg } ]

@@ -246,6 +246,7 @@ services:
     mem_limit: 1.5g
     command: start-notebook.sh --NotebookApp.token='' --NotebookApp.allow_origin='*'
   airflow-db:
+    profiles: ["control"]
     image: postgres:14
     container_name: airflow-db
     environment:
@@ -262,6 +263,7 @@ services:
       retries: 40
 
   airflow-webserver:
+    profiles: ["control"]
     build:
       context: .
       dockerfile: docker/airflow/Dockerfile
@@ -295,6 +297,7 @@ services:
     networks: [big-data-net]
 
   airflow-scheduler:
+    profiles: ["control"]
     build:
       context: .
       dockerfile: docker/airflow/Dockerfile
@@ -323,6 +326,7 @@ services:
     command: scheduler
     networks: [big-data-net]
   airflow-init:
+    profiles: ["control"]
     build:
       context: .
       dockerfile: docker/airflow/Dockerfile
@@ -361,6 +365,7 @@ services:
     networks: [big-data-net]
 
   marquez-db:
+    profiles: ["control"]
     image: postgres:14
     container_name: marquez-db
     env_file: [.env]
@@ -376,6 +381,7 @@ services:
       retries: 30
 
   marquez:
+    profiles: ["control"]
     image: marquezproject/marquez:0.50.0
     container_name: marquez
     depends_on:
@@ -393,6 +399,7 @@ services:
       retries: 40
 
   marquez-web:
+    profiles: ["control"]
     image: marquezproject/marquez-web:0.50.0   # pin a matching tag
     environment:
       - WEB_PORT=3000
