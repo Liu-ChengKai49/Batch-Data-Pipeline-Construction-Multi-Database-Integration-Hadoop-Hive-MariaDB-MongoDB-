@@ -67,17 +67,17 @@ def _compute_returns_df(df: pd.DataFrame) -> pd.DataFrame:
     out["dt"] = pd.to_datetime(out["dt"])
     out = out.sort_values(["symbol", "dt"])
 
-    grp = out.groupby("symbol")["close"]
-    # divide the Series by the group-shifted Series (NOT groupby-by-groupby)
-    out["return_1d"]  = (out["close"] / grp.shift(1)  - 1)
-    out["return_7d"]  = (out["close"] / grp.shift(7)  - 1)
-    out["return_30d"] = (out["close"] / grp.shift(30) - 1)
+    g = out.groupby("symbol")["close"]
+    # Correct: (current - previous) / previous
+    out["return_1d"]  = g.pct_change(1)
+    out["return_7d"]  = g.pct_change(7)
+    out["return_30d"] = g.pct_change(30)
     # zero-div can yield inf; normalize to NaN then round
     returns_cols = ["return_1d", "return_7d", "return_30d"]
     out[returns_cols] = (
         out[returns_cols]
-        .replace([np.inf, -np.inf], np.nan)
-        .round(6)
+          .replace([np.inf, -np.inf], np.nan)
+          .round(6)
     )
     return out
 
