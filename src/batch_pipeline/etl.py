@@ -65,21 +65,30 @@ def _compute_returns_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     out = df.copy()
     out["dt"] = pd.to_datetime(out["dt"])
-    out = out.sort_values(["symbol", "dt"])
+    # 1) sort and 2) reset index so groupby.shift uses this exact order
+    out = out.sort_values(["symbol", "dt"]).reset_index(drop=True)
 
-    g = out.groupby("symbol")["close"]
-    # Correct: (current - previous) / previous
-    out["return_1d"]  = g.pct_change(1)
-    out["return_7d"]  = g.pct_change(7)
-    out["return_30d"] = g.pct_change(30)
-    # zero-div can yield inf; normalize to NaN then round
+    close = out["close"].astype(float)
+    labels = out["symbol"]
+
+    prev1  = close.groupby(labels).shift(1)
+    prev7  = close.groupby(labels).shift(7)
+    prev30 = close.groupby(labels).shift(30)
+
+    # (current / previous) - 1
+    out["return_1d"]  = close.div(prev1).sub(1.0)
+    out["return_7d"]  = close.div(prev7).sub(1.0)
+    out["return_30d"] = close.div(prev30).sub(1.0)
+
     returns_cols = ["return_1d", "return_7d", "return_30d"]
     out[returns_cols] = (
         out[returns_cols]
-          .replace([np.inf, -np.inf], np.nan)
-          .round(6)
+        .replace([np.inf, -np.inf], np.nan)
+        .round(6)
     )
     return out
+
+
 
 def _compute_return_scalar(row: Dict[str, float]) -> float:
     """
