@@ -1,12 +1,18 @@
-import time, pandas as pd
+import time
+
+import pandas as pd
+
 from batch_pipeline.db import mariadb_conn, upsert_prices
 from batch_pipeline.etl import clean_prices
+
 
 def _wait_db():
     for _ in range(60):
         try:
-            with mariadb_conn(): return
-        except Exception: time.sleep(1)
+            with mariadb_conn(): 
+                return
+        except Exception: 
+            time.sleep(1)
     raise RuntimeError("MariaDB not ready")
 
 def test_upsert_slice():
