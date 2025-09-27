@@ -1,0 +1,32 @@
+.PHONY: install lint type test unit integ up-ci down-ci smoke-ci build-img
+
+install:
+\tpython -m pip install -U pip
+\tpip install ".[dev]"
+
+lint:
+\truff check .
+
+type:
+\tmypy src
+
+unit:
+\tpytest -q tests/unit --cov=src --cov-fail-under=85
+
+integ:
+\tpytest -q tests/integration
+
+test: unit integ
+
+up-ci:
+\tdocker compose -f compose.ci.yaml up -d --wait
+
+down-ci:
+\tdocker compose -f compose.ci.yaml down -v
+
+smoke-ci: up-ci
+\tpython scripts/smoke_ci.py
+\t$(MAKE) down-ci
+
+build-img:
+\tdocker build -f docker/etl.Dockerfile -t ghcr.io/<you>/batch-etl:local .

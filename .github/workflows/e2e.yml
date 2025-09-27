@@ -1,0 +1,19 @@
+name: e2e
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*.*.*']
+jobs:
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose up (full stack)
+        run: docker compose -f docker-compose.yml up -d
+      - name: Warmup
+        run: sleep 40
+      - name: E2E smoke (placeholder)
+        run: bash scripts/smoke_e2e.sh
+      - name: Compose down
+        if: always()
+        run: docker compose -f docker-compose.yml down -v

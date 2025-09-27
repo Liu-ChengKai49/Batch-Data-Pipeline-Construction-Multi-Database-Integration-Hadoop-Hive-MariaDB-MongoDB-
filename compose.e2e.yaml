@@ -1,0 +1,3 @@
+# thin wrapper that includes your full docker-compose.yml
+include:
+  - docker-compose.yml

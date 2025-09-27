@@ -178,6 +178,13 @@ To support diverse consumption needs, I built and executed a **complete ETL proc
 
 ---
 
+## CI/CD at a glance
+- **CI (PRs):** Lint (ruff) → Type (mypy) → Unit tests (Hypothesis) → Quick integration with MariaDB service → `scripts/smoke_ci.py`.
+- **E2E (manual/tag):** Bring up full stack with `docker-compose.yml` → run `scripts/smoke_e2e.sh`.
+- **Release (tag vX.Y.Z):** Build & push ETL image to GHCR: `ghcr.io/<you>/batch-etl:<tag>`.
+- **One-command local smoke:** `make smoke-ci`
+
+
 ### 📬 Next Steps
 
 * [ ] Add Airflow for scheduled ETL jobs
