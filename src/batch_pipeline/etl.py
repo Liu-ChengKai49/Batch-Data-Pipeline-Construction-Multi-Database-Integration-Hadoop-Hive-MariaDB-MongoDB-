@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, Union
 
+import numpy as np
 import pandas as pd
 
 RetType = Union[pd.DataFrame, float]
@@ -66,14 +67,19 @@ def _compute_returns_df(df: pd.DataFrame) -> pd.DataFrame:
     out["dt"] = pd.to_datetime(out["dt"])
     out = out.sort_values(["symbol", "dt"])
 
-    grp = out.groupby("symbol", group_keys=False)["close"]
-
-    # exact simple returns: (curr/prev - 1), not (curr - prev) / curr
-    out["return_1d"]  = (grp / grp.shift(1)  - 1).round(6)
-    out["return_7d"]  = (grp / grp.shift(7)  - 1).round(6)
-    out["return_30d"] = (grp / grp.shift(30) - 1).round(6)
-
-    return out.reset_index(drop=True)
+    grp = out.groupby("symbol")["close"]
+    # divide the Series by the group-shifted Series (NOT groupby-by-groupby)
+    out["return_1d"]  = (out["close"] / grp.shift(1)  - 1)
+    out["return_7d"]  = (out["close"] / grp.shift(7)  - 1)
+    out["return_30d"] = (out["close"] / grp.shift(30) - 1)
+    # zero-div can yield inf; normalize to NaN then round
+    returns_cols = ["return_1d", "return_7d", "return_30d"]
+    out[returns_cols] = (
+        out[returns_cols]
+        .replace([np.inf, -np.inf], np.nan)
+        .round(6)
+    )
+    return out
 
 def _compute_return_scalar(row: Dict[str, float]) -> float:
     """
