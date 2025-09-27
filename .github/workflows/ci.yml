@@ -1,7 +1,9 @@
 name: ci
 on:
   push:
+    branches: [main]          # no push runs for feature branches
   pull_request:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
