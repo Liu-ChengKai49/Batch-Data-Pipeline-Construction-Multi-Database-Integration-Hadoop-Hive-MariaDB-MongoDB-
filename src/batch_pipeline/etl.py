@@ -58,19 +58,22 @@ def clean_prices(df: pd.DataFrame) -> pd.DataFrame:
 
 # ---------- returns logic (keeps your recent refactor) ----------
 def _compute_returns_df(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add simple returns from close: 1d, 7d, 30d by symbol, sorted by dt.
+    Required columns: symbol, dt (YYYY-MM-DD), close.
+    """
     out = df.copy()
     out["dt"] = pd.to_datetime(out["dt"])
-    out = out.sort_values(["symbol", "dt"]).reset_index(drop=True)
+    out = out.sort_values(["symbol", "dt"])
 
-    close = out.groupby("symbol", group_keys=False)["close"]
-    prev1  = close.shift(1)
-    prev7  = close.shift(7)
-    prev30 = close.shift(30)
+    grp = out.groupby("symbol", group_keys=False)["close"]
 
-    out["return_1d"]  = ((out["close"] - prev1)  / prev1).round(6)
-    out["return_7d"]  = ((out["close"] - prev7)  / prev7).round(6)
-    out["return_30d"] = ((out["close"] - prev30) / prev30).round(6)
-    return out
+    # exact simple returns: (curr/prev - 1), not (curr - prev) / curr
+    out["return_1d"]  = (grp / grp.shift(1)  - 1).round(6)
+    out["return_7d"]  = (grp / grp.shift(7)  - 1).round(6)
+    out["return_30d"] = (grp / grp.shift(30) - 1).round(6)
+
+    return out.reset_index(drop=True)
 
 def _compute_return_scalar(row: Dict[str, float]) -> float:
     """
