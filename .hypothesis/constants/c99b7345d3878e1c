@@ -1,0 +1,4 @@
+# file: /mnt/c/Users/harry/Desktop/工作/DE_project/Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-/src/batch_pipeline/etl.py
+# hypothesis_version: 6.140.2
+
+[0.0, '%Y-%m-%d', 'clean_prices', 'close', 'compute_returns', 'dt', 'high', 'low', 'make_partition_path', 'open', 'return_1d', 'return_30d', 'return_7d', 'symbol', 'volume']

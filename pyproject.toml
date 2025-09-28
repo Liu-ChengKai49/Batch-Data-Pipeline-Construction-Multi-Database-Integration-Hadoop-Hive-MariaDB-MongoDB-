@@ -1,32 +1,36 @@
-.PHONY: install lint type test unit integ up-ci down-ci smoke-ci build-img
+[project]
+name = "batch_pipeline"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.7",
+  "pandas>=2.2",
+  "hypothesis>=6.98",
+  "pymysql>=1.1",         # <— add this line
+]
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-cov>=5.0",
+  "mypy>=1.11",
+  "ruff>=0.6.8",
+]
 
-install:
-\tpython -m pip install -U pip
-\tpip install ".[dev]"
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Only lint these paths (skip notebooks, dq/, data/, etc.)
+src = ["src", "tests", "scripts"]
+extend-exclude = ["notebooks", "dq", "data", "hadoop-conf"]
 
-lint:
-\truff check .
+[tool.ruff.lint]
+# Keep isort (import sorting) and standard rules
+extend-select = ["I"]
 
-type:
-\tmypy src
+[[tool.mypy.overrides]]
+module = ["pymysql.*"]
+ignore_missing_imports = true
 
-unit:
-\tpytest -q tests/unit --cov=src --cov-fail-under=85
-
-integ:
-\tpytest -q tests/integration
-
-test: unit integ
-
-up-ci:
-\tdocker compose -f compose.ci.yaml up -d --wait
-
-down-ci:
-\tdocker compose -f compose.ci.yaml down -v
-
-smoke-ci: up-ci
-\tpython scripts/smoke_ci.py
-\t$(MAKE) down-ci
-
-build-img:
-\tdocker build -f docker/etl.Dockerfile -t ghcr.io/<you>/batch-etl:local .
+[[tool.mypy.overrides]]
+module = ["pandas", "pandas.*"]
+ignore_missing_imports = true

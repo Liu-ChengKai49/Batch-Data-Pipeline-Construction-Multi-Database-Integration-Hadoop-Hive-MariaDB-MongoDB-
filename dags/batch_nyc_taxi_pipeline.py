@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from datetime import datetime
+
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
 from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
 
 DAG_ID = "batch_nyc_taxi_pipeline"
 START_DATE = datetime(2025, 1, 1)

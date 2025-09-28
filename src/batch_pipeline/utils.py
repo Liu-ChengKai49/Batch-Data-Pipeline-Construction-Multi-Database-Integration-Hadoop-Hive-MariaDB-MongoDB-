@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+
 class PriceRow(BaseModel):
     symbol: str
     dt: str  # YYYY-MM-DD
