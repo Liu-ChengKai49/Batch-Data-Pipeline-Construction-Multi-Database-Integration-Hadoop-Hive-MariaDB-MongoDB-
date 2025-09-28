@@ -66,6 +66,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mariadb-client
+      
+      - name: Diagnose MariaDB reachability (once)
+        run: |
+          which mysqladmin || true
+          getent hosts mariadb || true
+          # Is TCP 3306 open from runner?
+          (command -v nc >/dev/null && nc -vz -w 2 mariadb 3306) || true
+          # Try ping WITHOUT redirect to see the exact error once
+          mysqladmin --connect-timeout=2 ping -h mariadb -uroot -proot --protocol=tcp || true      
+      
       - name: Wait for MariaDB (max ~120s)
         run: |
           for i in {1..60}; do
