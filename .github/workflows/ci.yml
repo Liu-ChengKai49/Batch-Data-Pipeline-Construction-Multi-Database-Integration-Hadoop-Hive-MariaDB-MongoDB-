@@ -60,8 +60,8 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --protocol=tcp || exit 1"
           --health-interval=5s
           --health-timeout=5s
-          --health-retries=60
-          --health-start-period=20s
+          --health-retries=120
+          --health-start-period=60s
       mongo:
         image: mongo:6
         # No ports needed for this job, we don't talk to Mongo from host
