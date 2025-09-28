@@ -1,7 +1,7 @@
 # Batch Data Pipeline Construction & Multi-Database Integration
 
-This project marks my foundational step into data engineering. I set out to build a robust, end-to-end **batch data pipeline**, aiming to understand how core big data tools integrate to handle real-world data challenges—especially those involving **large-scale batch data** and **multi-database storage**.
-
+End-to-end batch data pipeline on Docker Compose, wiring Hadoop/HDFS, Hive, MariaDB, and MongoDB—with Python ETL, tests, and CI/CD.
+[![CI](https://github.com/Liu-ChengKai49/Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Liu-ChengKai49/Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-/actions/workflows/ci.yml)
 ---
 
 ## 🔍 Problem Statement
@@ -12,7 +12,9 @@ Industries like manufacturing generate vast batches of data—sensor logs, equip
 * **Effective Transformation:** How to clean and convert raw data into a structured, queryable format.
 * **Diverse Consumption Needs:** How to serve different access patterns (e.g., SQL for analytics, NoSQL for flexible querying).
 * **Reproducible Setup:** How to integrate complex big data tools in a consistent, easily deployable development environment.
+* **Tests & Quality:** unit + integration tests, Ruff, MyPy, ≥85% coverage gate.
 
+* **CI/CD:** matrix on Python 3.10/3.11/3.12 + quick integration against a containerized MariaDB.
 ---
 
 ## 🚀 My Learning Journey & Implementation
@@ -177,12 +179,6 @@ To support diverse consumption needs, I built and executed a **complete ETL proc
 * Deployed all services via Docker Compose, creating a reproducible environment and demonstrating proficiency in container orchestration.
 
 ---
-
-## CI/CD at a glance
-- **CI (PRs):** Lint (ruff) → Type (mypy) → Unit tests (Hypothesis) → Quick integration with MariaDB service → `scripts/smoke_ci.py`.
-- **E2E (manual/tag):** Bring up full stack with `docker-compose.yml` → run `scripts/smoke_e2e.sh`.
-- **Release (tag vX.Y.Z):** Build & push ETL image to GHCR: `ghcr.io/<you>/batch-etl:<tag>`.
-- **One-command local smoke:** `make smoke-ci`
 
 
 ### 📬 Next Steps
