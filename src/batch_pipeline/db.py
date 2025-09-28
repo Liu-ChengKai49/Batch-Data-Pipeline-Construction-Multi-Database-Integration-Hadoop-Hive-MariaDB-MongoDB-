@@ -91,6 +91,14 @@ def _ensure_schema_and_table(conn) -> None:
             ) ENGINE=InnoDB;
             """
         )
+         # Expose a stable mart name expected by tests
+        cur.execute(
+            """
+            CREATE OR REPLACE VIEW demo.prices_daily_mart AS
+            SELECT symbol, dt, open, high, low, close, volume
+            FROM demo.prices_daily;
+            """
+        )
 
 
 def _as_tuples(rows: Iterable[Dict[str, Any]]) -> List[Tuple[Any, ...]]:
@@ -98,9 +106,10 @@ def _as_tuples(rows: Iterable[Dict[str, Any]]) -> List[Tuple[Any, ...]]:
     return [tuple(r[k] for k in order) for r in rows]
 
 
-def upsert_prices(conn, rows: Iterable[Dict[str, Any]], *, table: str = "prices_daily") -> int:
+def upsert_prices_conn(conn, rows: Iterable[Dict[str, Any]], *, table: str = "prices_daily") -> int:
     """
-    Upsert dict rows into demo.<table>. Returns number of rows attempted.
+    Upsert dict rows into demo.<table> using an existing connection.
+    Returns number of rows attempted.
     """
     _ensure_schema_and_table(conn)
     rows_list = list(rows)
@@ -110,3 +119,18 @@ def upsert_prices(conn, rows: Iterable[Dict[str, Any]], *, table: str = "prices_
     with conn.cursor() as cur:
         cur.executemany(sql, _as_tuples(rows_list))
     return len(rows_list)
+
+def upsert_prices(rows: Iterable[Dict[str, Any]], *, table: str = "prices_daily") -> int:
+    """
+    Convenience wrapper: read connection info from env and upsert rows.
+    """
+    with mariadb_conn() as conn:
+        return upsert_prices_conn(conn, rows, table=table)
+
+# (optional) at bottom of file
+__all__ = [
+    "mariadb_conn",
+    "build_upsert_sql",
+    "upsert_prices",        # wrapper taking only rows
+    "upsert_prices_conn",   # explicit-conn version
+]
