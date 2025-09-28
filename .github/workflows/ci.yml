@@ -52,10 +52,11 @@ jobs:
           MARIADB_ROOT_PASSWORD: root
           MARIADB_DATABASE: demo
         ports:
-          - 3306:3306            # <— publish to host
-        # no ports, no healthcheck; we'll wait in a step
+          - 3306:3306
       mongo:
         image: mongo:6
+        # if you need it from the VM, also publish:
+        # ports: ["27017:27017"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -64,24 +65,25 @@ jobs:
           cache: pip
       - run: python -m pip install -U pip
       - run: pip install ".[dev]"
+
       - name: Install mysql client (for mysqladmin)
         run: |
           sudo apt-get update
           sudo apt-get install -y mariadb-client
-      
+
       - name: Diagnose MariaDB reachability (once)
         run: |
           which mysqladmin || true
-          getent hosts mariadb || true
-          # Is TCP 3306 open from runner?
-          (command -v nc >/dev/null && nc -vz -w 2 mariadb 3306) || true
-          # Try ping WITHOUT redirect to see the exact error once
-          mysqladmin --connect-timeout=2 ping -h mariadb -uroot -proot --protocol=tcp || true      
-      
+          # DNS won't resolve "mariadb" on the VM; check localhost instead
+          (command -v nc >/dev/null && nc -vz -w 2 127.0.0.1 3306) || true
+          mysqladmin --connect-timeout=2 ping \
+            -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp || true
+
       - name: Wait for MariaDB (max ~120s)
         run: |
           for i in {1..60}; do
-            if mysqladmin --connect-timeout=2 ping -h mariadb -uroot -proot --protocol=tcp >/dev/null 2>&1; then
+            if mysqladmin --connect-timeout=2 ping \
+                 -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp >/dev/null 2>&1; then
               echo "MariaDB is up on attempt $i"
               exit 0
             fi
@@ -90,17 +92,19 @@ jobs:
           done
           echo "MariaDB did not become ready in time"
           exit 1
+
       - name: Smoke (Pandas → MariaDB)
         env:
-          MARIADB_HOST: mariadb
+          MARIADB_HOST: 127.0.0.1
           MARIADB_USER: root
           MARIADB_PASSWORD: root
           MARIADB_DB: demo
           MARIADB_PORT: 3306
         run: python scripts/smoke_ci.py
+
       - name: Integration tests (optional)
         env:
-          MARIADB_HOST: mariadb
+          MARIADB_HOST: 127.0.0.1
           MARIADB_USER: root
           MARIADB_PASSWORD: root
           MARIADB_DB: demo
