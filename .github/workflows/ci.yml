@@ -1,7 +1,7 @@
 name: ci
 on:
   push:
-    branches: [main]          # no push runs for feature branches
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -25,9 +25,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          cache: pip
       - run: python -m pip install -U pip
-      # EITHER: editable install + keep --cov=src/...
       - name: Install dev deps (editable)
         run: pip install -e ".[dev]"
       - name: Ruff
@@ -36,9 +35,6 @@ jobs:
         run: mypy src
       - name: Unit tests + coverage (>=85%)
         run: pytest -q tests/unit --cov=src/batch_pipeline --cov-report=xml:coverage.xml --cov-fail-under=85
-      # If you prefer non-editable installs, swap the two steps above for:
-      #   run: pip install ".[dev]"
-      #   run: pytest -q tests/unit --cov=batch_pipeline --cov-report=xml:coverage.xml --cov-fail-under=85
       - name: Upload coverage.xml
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,6 +43,7 @@ jobs:
           path: coverage.xml
 
   quick-integration:
+    needs: unit-and-lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -55,27 +52,33 @@ jobs:
         env:
           MARIADB_ROOT_PASSWORD: root
           MARIADB_DATABASE: demo
-        ports: ["3306:3306"]              # publish so 127.0.0.1:3306 works from the runner
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --protocol=tcp || exit 1"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=120
-          --health-start-period=60s
+        # no ports, no healthcheck; we'll wait in a step
       mongo:
         image: mongo:6
-        # No ports needed for this job, we don't talk to Mongo from host
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
+          cache: pip
       - run: python -m pip install -U pip
       - run: pip install ".[dev]"
+      - name: Install mysql client (for mysqladmin)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mariadb-client
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..60}; do
+            if mysqladmin ping -h mariadb -uroot -proot --protocol=tcp >/dev/null 2>&1; then
+              echo "MariaDB is up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "MariaDB did not become ready in time"; exit 1
       - name: Smoke (Pandas → MariaDB)
         env:
-          MARIADB_HOST: 127.0.0.1
+          MARIADB_HOST: mariadb
           MARIADB_USER: root
           MARIADB_PASSWORD: root
           MARIADB_DB: demo
@@ -83,7 +86,7 @@ jobs:
         run: python scripts/smoke_ci.py
       - name: Integration tests (optional)
         env:
-          MARIADB_HOST: 127.0.0.1
+          MARIADB_HOST: mariadb
           MARIADB_USER: root
           MARIADB_PASSWORD: root
           MARIADB_DB: demo
