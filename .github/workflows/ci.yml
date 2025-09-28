@@ -66,15 +66,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mariadb-client
-      - name: Wait for MariaDB
+      - name: Wait for MariaDB (max ~120s)
         run: |
           for i in {1..60}; do
-            if mysqladmin ping -h mariadb -uroot -proot --protocol=tcp >/dev/null 2>&1; then
-              echo "MariaDB is up"; exit 0
+            if mysqladmin --connect-timeout=2 ping -h mariadb -uroot -proot --protocol=tcp >/dev/null 2>&1; then
+              echo "MariaDB is up on attempt $i"
+              exit 0
             fi
+            echo "Waiting for MariaDB... ($i/60)"
             sleep 2
           done
-          echo "MariaDB did not become ready in time"; exit 1
+          echo "MariaDB did not become ready in time"
+          exit 1
       - name: Smoke (Pandas → MariaDB)
         env:
           MARIADB_HOST: mariadb
