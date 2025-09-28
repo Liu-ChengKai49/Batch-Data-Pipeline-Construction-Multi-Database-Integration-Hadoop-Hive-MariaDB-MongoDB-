@@ -6,9 +6,10 @@ services:
       MARIADB_DATABASE: demo
       MARIADB_USER: demo
       MARIADB_PASSWORD: demo
-    ports: ["3306:3306"]
+    ports:
+      - "3306:3306"   # or "13306:3306" if 3306 is busy
     healthcheck:
-      test: ["CMD-SHELL","mysqladmin ping -h 127.0.0.1 -proot"]
+      test: ["CMD-SHELL","mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 30

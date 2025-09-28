@@ -9,8 +9,8 @@ from batch_pipeline.etl import clean_prices
 # ← Must match compose.ci.yaml
 os.environ.setdefault("MARIADB_HOST", "127.0.0.1")
 os.environ.setdefault("MARIADB_PORT", "3306")
-os.environ.setdefault("MARIADB_USER", "demo")
-os.environ.setdefault("MARIADB_PASSWORD", "demo")
+os.environ.setdefault("MARIADB_USER", "root")
+os.environ.setdefault("MARIADB_PASSWORD", "root")
 os.environ.setdefault("MARIADB_DB", "demo")
 
 def wait_for_mariadb(timeout_sec: int = 60) -> None:
