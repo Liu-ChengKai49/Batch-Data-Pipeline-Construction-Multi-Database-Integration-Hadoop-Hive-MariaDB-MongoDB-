@@ -51,6 +51,8 @@ jobs:
         env:
           MARIADB_ROOT_PASSWORD: root
           MARIADB_DATABASE: demo
+        ports:
+          - 3306:3306            # <— publish to host
         # no ports, no healthcheck; we'll wait in a step
       mongo:
         image: mongo:6
