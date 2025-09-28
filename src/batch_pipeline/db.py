@@ -120,13 +120,21 @@ def upsert_prices_conn(conn, rows: Iterable[Dict[str, Any]], *, table: str = "pr
         cur.executemany(sql, _as_tuples(rows_list))
     return len(rows_list)
 
-def upsert_prices(rows: Iterable[Dict[str, Any]], *, table: str = "prices_daily") -> int:
+def upsert_prices(*args, table: str = "prices_daily") -> int:
     """
-    Convenience wrapper: read connection info from env and upsert rows.
+    Backward-compatible API:
+      - upsert_prices(conn, rows, *, table=...)  # old style (unit tests)
+      - upsert_prices(rows, *, table=...)        # wrapper style (smoke/CI)
     """
-    with mariadb_conn() as conn:
+    if len(args) == 1:
+        rows = args[0]
+        with mariadb_conn() as conn:
+            return upsert_prices_conn(conn, rows, table=table)
+    elif len(args) == 2:
+        conn, rows = args
         return upsert_prices_conn(conn, rows, table=table)
-
+    else:
+        raise TypeError("upsert_prices expects (rows) or (conn, rows)")
 # (optional) at bottom of file
 __all__ = [
     "mariadb_conn",
