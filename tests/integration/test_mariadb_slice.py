@@ -25,5 +25,9 @@ def test_upsert_slice():
     n = upsert_prices(df.to_dict("records"))
     assert n >= 1
     with mariadb_conn() as c, c.cursor() as cur:
-        cur.execute("SELECT COUNT(*) AS c FROM prices_daily_mart WHERE symbol='2330'")
+        cur.execute("""
+            SELECT COUNT(*) AS c
+            FROM prices_daily_mart
+            WHERE symbol='2330' AND dt='2025-09-01'
+        """)
         assert cur.fetchone()["c"] == 1
