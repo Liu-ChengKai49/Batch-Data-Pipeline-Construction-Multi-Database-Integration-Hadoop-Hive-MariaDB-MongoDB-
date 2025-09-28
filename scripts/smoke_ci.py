@@ -44,7 +44,7 @@ df = pd.DataFrame(
 df = clean_prices(df)
 
 with mariadb_conn() as conn:
-    upsert_prices(conn, df.to_dict("records"))
+    upsert_prices(df.to_dict("records"))
     with conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) AS cnt FROM demo.prices_daily;")
         rows = fetch_count(cur)
