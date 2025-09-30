@@ -100,11 +100,12 @@ services:
     volumes:
       - /mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dq:/opt/dq:ro
       - mariadb-data:/var/lib/mysql
+      - .:/work
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-      - MARIADB_DATABASE=hive_metastore
-      - MARIADB_USER=hive
-      - MARIADB_PASSWORD=hive_password
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
     networks:
       - big-data-net
     healthcheck:
@@ -212,12 +213,14 @@ services:
     container_name: jupyterlab
     ports:
       - "8888:8888"
+    working_dir: /work
     volumes:
       # Mount the local notebooks directory
       - ./notebooks:/home/jovyan/work
       # Add this line to mount your local data directory
       - ./data:/home/jovyan/work/data
       - "/mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dq:/home/jovyan/work/dq_ext"
+      - .:/work
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - GRANT_SUDO=yes

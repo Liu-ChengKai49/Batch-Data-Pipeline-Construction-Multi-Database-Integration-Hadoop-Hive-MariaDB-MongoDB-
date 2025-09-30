@@ -1,4 +1,4 @@
-# tools/hive_to_mariadb.py
+# src/tools/hive_to_mariadb.py
 import os, pandas as pd
 from pyhive import hive
 from etl.tw_stocks.upsert_to_mariadb import upsert_prices
@@ -13,19 +13,63 @@ def read_from_hive(sql: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
     q = """
+    WITH raw AS (
       SELECT
-        CAST(dt AS DATE) AS dt,
-        symbol,
-        CAST(open AS DECIMAL(18,4))  AS open,
-        CAST(high AS DECIMAL(18,4))  AS high,
-        CAST(low  AS DECIMAL(18,4))  AS low,
-        CAST(close AS DECIMAL(18,4)) AS close,
-        CAST(volume AS BIGINT)       AS volume,
-        CAST(vwap AS DECIMAL(18,6))  AS vwap,
-        CAST(is_trading_day AS TINYINT) AS is_trading_day
-      FROM stocks_prices_raw
+        CAST(dt AS DATE)                            AS dt,
+        TRIM(symbol)                                AS symbol,
+        TRIM(CAST(open  AS STRING))                 AS open_s,
+        TRIM(CAST(high  AS STRING))                 AS high_s,
+        TRIM(CAST(low   AS STRING))                 AS low_s,
+        TRIM(CAST(close AS STRING))                 AS close_s,
+        TRIM(CAST(volume AS STRING))                AS volume_s,
+        TRIM(CAST(vwap   AS STRING))                AS vwap_s,
+        TRIM(CAST(is_trading_day AS STRING))        AS flag_s
+      FROM default.stocks_prices_raw
       WHERE dt >= DATE '2024-01-01'
+    ),
+    norm AS (
+      SELECT
+        dt, symbol,
+        NULLIF(open_s,   '')  AS open_s,
+        NULLIF(high_s,   '')  AS high_s,
+        NULLIF(low_s,    '')  AS low_s,
+        NULLIF(close_s,  '')  AS close_s,
+        NULLIF(volume_s, '')  AS volume_s,
+        NULLIF(vwap_s,   '')  AS vwap_s,
+        NULLIF(flag_s,   '')  AS flag_s
+      FROM raw
+    ),
+    num AS (
+      SELECT
+        dt,
+        symbol,
+        CAST(regexp_replace(open_s,   ',', '') AS DECIMAL(18,4))  AS open,
+        CAST(regexp_replace(high_s,   ',', '') AS DECIMAL(18,4))  AS high,
+        CAST(regexp_replace(low_s,    ',', '') AS DECIMAL(18,4))  AS low,
+        CAST(regexp_replace(close_s,  ',', '') AS DECIMAL(18,4))  AS close,
+        CAST(regexp_replace(volume_s, ',', '') AS BIGINT)         AS volume,
+        CAST(regexp_replace(vwap_s,   ',', '') AS DECIMAL(18,6))  AS vwap,
+        CASE
+          WHEN flag_s IN ('0','1') THEN CAST(flag_s AS TINYINT)
+          WHEN CAST(regexp_replace(volume_s, ',', '') AS BIGINT) > 0 THEN CAST(1 AS TINYINT)
+          ELSE CAST(0 AS TINYINT)
+        END AS is_trading_day
+      FROM norm
+    )
+    SELECT *
+    FROM num
+    WHERE dt IS NOT NULL
+      AND symbol IS NOT NULL
+      AND open  IS NOT NULL AND high IS NOT NULL AND low IS NOT NULL AND close IS NOT NULL
+      AND volume IS NOT NULL
+      AND open  >= 0 AND high >= 0 AND low >= 0 AND close >= 0 AND volume >= 0
+      AND high >= low
     """
     df = read_from_hive(q)
+    # optional debug
+    print("df.shape:", df.shape)
+    print(df.dtypes)
+    print(df.head(3).to_string(index=False))
+
     n = upsert_prices(df)
     print(f"UPSERT_FROM_HIVE rows={n}")

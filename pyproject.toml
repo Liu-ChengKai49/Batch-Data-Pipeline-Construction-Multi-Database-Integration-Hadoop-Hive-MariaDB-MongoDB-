@@ -6,7 +6,11 @@ dependencies = [
   "pydantic>=2.7",
   "pandas>=2.2",
   "hypothesis>=6.98",
+  "sqlalchemy>=2.0",
   "pymysql>=1.1",         # <— add this line
+  "pyarrow>=13",        # you already have 13.0.0 in the container
+  "requests>=2.31",     # used by WebHDFS uploader
+  "yfinance>=0.2.43",   # <-- needed by fetch_ohlcv()
 ]
 [project.optional-dependencies]
 dev = [
@@ -14,6 +18,12 @@ dev = [
   "pytest-cov>=5.0",
   "mypy>=1.11",
   "ruff>=0.6.8",
+]
+hive = [
+  "pyhive>=0.7.0",
+  "thrift>=0.16",
+  "thrift-sasl>=0.4.3",
+  "pure-sasl>=0.6.2"
 ]
 
 [tool.ruff]
