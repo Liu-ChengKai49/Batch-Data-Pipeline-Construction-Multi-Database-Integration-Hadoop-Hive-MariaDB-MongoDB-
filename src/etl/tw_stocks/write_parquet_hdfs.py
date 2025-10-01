@@ -40,106 +40,272 @@ def webhdfs_put(local_path: pl.Path, hdfs_dest: str) -> None:
         raise RuntimeError(f"UPLOAD {hdfs_dest} -> {r2.status_code} {r2.text[:200]}")
 
 
-def to_long(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize OHLCV data to tidy rows with columns:
-      dt, symbol, open, high, low, close, volume, vwap, is_trading_day
-    """
-    want_metrics = {"open", "high", "low", "close", "volume", "vwap"}
+def to_long(df: pd.DataFrame, require_full_ohlcv: bool = False) -> pd.DataFrame:
+    import re
+    want = {"open", "high", "low", "close", "volume"}
 
-    # Case 1: MultiIndex columns (wide table)
+    # --- Helper: try to parse wide-but-flat columns into a MultiIndex ---
+    def _maybe_split_flat_to_mi(_df: pd.DataFrame) -> pd.DataFrame:
+        cols = [str(c) for c in _df.columns]
+        # patterns we accept:
+        #   1) metric.separator.symbol  e.g., "open.2330.TW" / "open__2330.tw"
+        #   2) symbol.separator.metric  e.g., "2330.TW_open"
+        # separators: dot, double underscore, single underscore
+        sep = r"(?:\.|__|_)"
+        metric_first = all(re.match(rf"^([a-z]+){sep}(.+)$", c, flags=re.I) for c in cols)
+        symbol_first = all(re.match(rf"^(.+){sep}([a-z]+)$", c, flags=re.I) for c in cols)
+        if metric_first:
+            pairs = []
+            for c in cols:
+                m = re.match(rf"^([a-z]+){sep}(.+)$", c, flags=re.I)
+                metric, sym = m.group(1).lower(), m.group(2).lower()
+                pairs.append((metric, sym))
+            if all(m in want or m == "vwap" for m, _ in pairs):
+                new_df = _df.copy()
+                new_df.columns = pd.MultiIndex.from_tuples(pairs, names=["metric", "symbol"])
+                return new_df
+        elif symbol_first:
+            pairs = []
+            for c in cols:
+                m = re.match(rf"^(.+){sep}([a-z]+)$", c, flags=re.I)
+                sym, metric = m.group(1).lower(), m.group(2).lower()
+                pairs.append((metric, sym))
+            if all(m in want or m == "vwap" for m, _ in pairs):
+                new_df = _df.copy()
+                new_df.columns = pd.MultiIndex.from_tuples(pairs, names=["metric", "symbol"])
+                return new_df
+        return _df
+
+    df_in = df  # keep for debug message
+    df = df.copy()
+    # Normalize obvious 'Date' index to a column early
+    if df.index.name and str(df.index.name).lower() in ("date", "dt"):
+        df = df.reset_index()
+
+    # If not MI but looks like wide-flat, convert to MI
+    if not isinstance(df.columns, pd.MultiIndex):
+        df = _maybe_split_flat_to_mi(df)
+
     if isinstance(df.columns, pd.MultiIndex):
-        lvl0 = {str(x).lower() for x in df.columns.get_level_values(0)}
-        lvl1 = {str(x).lower() for x in df.columns.get_level_values(1)}
+        # --- Your original MI logic, with small robustness tweaks ---
+        df.columns = pd.MultiIndex.from_tuples(
+            [(str(a).strip().lower(), str(b).strip().lower()) for a, b in df.columns],
+            names=df.columns.names
+        )
 
-        if want_metrics.issubset(lvl0):
+        lvl0 = set(df.columns.get_level_values(0))
+        lvl1 = set(df.columns.get_level_values(1))
+        if want.issubset(lvl0):
             metric_level, symbol_level = 0, 1
-        elif want_metrics.issubset(lvl1):
+        elif want.issubset(lvl1):
             metric_level, symbol_level = 1, 0
         else:
-            raise ValueError("Could not find expected metrics in MultiIndex levels")
+            raise ValueError(
+                f"Could not find expected OHLCV metrics in MultiIndex levels.\n"
+                f"lvl0 sample={list(lvl0)[:6]}\n"
+                f"lvl1 sample={list(lvl1)[:6]}"
+            )
 
-        # Stack by the symbol level -> long format (use new impl to avoid future warning)
-        long = df.stack(level=symbol_level, future_stack=True).reset_index()
+        def _is_flat(col):
+            if not isinstance(col, tuple):
+                return True
+            return (col[1] is None) or (str(col[1]).strip() == "")
 
-        # Figure out the name pandas gave to the stacked column
-        sym_col_name = df.columns.names[symbol_level] or "level_1"
-        if sym_col_name in long.columns and "symbol" not in long.columns:
-            long = long.rename(columns={sym_col_name: "symbol"})
+        flat_cols = [c for c in df.columns if _is_flat(c)]
+        two_cols  = [c for c in df.columns if not _is_flat(c)]
 
-        # Normalize date column to 'dt'
-        for cand in ("dt", "date", "Date"):
-            if cand in long.columns:
-                long = long.rename(columns={cand: "dt"})
-                break
-        else:
-            # heuristic fallback
+        flat = df[flat_cols].copy() if flat_cols else pd.DataFrame(index=df.index)
+        two_level = df[two_cols].copy()
+
+        long = two_level.stack(level=symbol_level, future_stack=True).reset_index()
+
+        # Name the symbol column consistently (robust fallback)
+        sym_col_name = two_level.columns.names[symbol_level] or "symbol"
+        if sym_col_name not in long.columns:
+            # robust fallback: search for common auto names
+            candidates = []
             for c in long.columns:
-                if c != "symbol":
-                    try:
-                        tmp = pd.to_datetime(long[c], errors="coerce")
-                        if tmp.notna().any():
-                            long[c] = tmp
-                            long = long.rename(columns={c: "dt"})
-                            break
-                    except Exception:
-                        pass
-            if "dt" not in long.columns:
-                raise ValueError("Could not infer date column (dt).")
+                cl = str(c).lower()
+                if cl in ("ticker", "symbol", "level_0", "level_1", "level_2"):
+                    candidates.append(c)
+            if candidates:
+                sym_col_name = candidates[-1]  # pick the last (often the stacked level)
+            else:
+                # last resort: if multiple 'level_*' present, the last one is often the stacked level
+                level_like = [c for c in long.columns if str(c).lower().startswith("level_")]
+                if level_like:
+                    sym_col_name = level_like[-1]
+                else:
+                    raise ValueError(
+                        f"Stacked frame has no obvious symbol column. Columns={list(long.columns)}"
+                    )
+        long = long.rename(columns={sym_col_name: "symbol"})
 
-        # Ensure expected columns exist
-        keep = ["dt", "symbol", "open", "high", "low", "close", "volume", "vwap", "is_trading_day"]
-        for k in keep:
-            if k not in long.columns:
-                long[k] = pd.NA
+        if not flat.empty:
+            flat = flat.copy()
+            # flatten ('metric','') -> 'metric'
+            flat.columns = [(c[0] if isinstance(c, tuple) else c) for c in flat.columns]
 
-        # Lowercase names, select only needed, then DROP DUPLICATE COLUMN NAMES
-        long.columns = [str(c).lower() for c in long.columns]
-        long = long[keep]
-        long = long.loc[:, ~long.columns.duplicated()]   # <- critical fix
-        return long
+            # ✅ NEW: prevent flat 'symbol' from entering the merge
+            flat = flat.drop(columns=["symbol"], errors="ignore")
 
-    # Case 2: Already tidy (simple Index)
-    cols_lower = {str(c).lower() for c in df.columns}
-    need = {"dt", "symbol"} | want_metrics
-    if need.issubset(cols_lower):
-        out = df.copy()
-        out.columns = [str(c).lower() for c in out.columns]
-        if "is_trading_day" not in out.columns:
-            out["is_trading_day"] = 1
-        out = out[["dt","symbol","open","high","low","close","volume","vwap","is_trading_day"]]
-        out = out.loc[:, ~out.columns.duplicated()]       # <- guard here too
-        return out
+            # find the level_* column produced by stack().reset_index()
+            idx_col = None
+            for c in long.columns:
+                if str(c).startswith("level_"):
+                    idx_col = c
+                    break
+            if idx_col is not None:
+                right = flat.reset_index()
+                long = long.merge(right, left_on=idx_col, right_on="index", how="left")
+                long = long.drop(columns=[idx_col, "index"], errors="ignore")
 
-    raise ValueError("fetch_ohlcv returned an unexpected shape; inspect upstream normalization.")
+        # ✅ NEW: if a duplicate slipped through, normalize it
+        if "symbol_x" in long.columns or "symbol_y" in long.columns:
+            if "symbol_x" in long.columns:
+                long = (
+                    long.drop(columns=["symbol_y"], errors="ignore")
+                        .rename(columns={"symbol_x": "symbol"})
+                )
+            else:
+                long = long.rename(columns={"symbol_y": "symbol"})
 
+
+        long = long.loc[:, ~long.columns.duplicated()].copy()
+        if isinstance(long.get("symbol"), pd.DataFrame):
+            long["symbol"] = long["symbol"].iloc[:, 0]
+
+        # numerics
+        for c in ["open", "high", "low", "close"]:
+            if c in long.columns:
+                long[c] = pd.to_numeric(long[c], errors="coerce")
+        if "vwap" not in long.columns or long["vwap"].isna().all():
+            if all(c in long.columns for c in ("high", "low", "close")):
+                long["vwap"] = ((long["high"] + long["low"] + long["close"]) / 3).round(6)
+
+        if "is_trading_day" not in long.columns:
+            long["is_trading_day"] = 1
+
+        # date → dt
+        if "dt" not in long.columns:
+            if "date" in long.columns:
+                long = long.rename(columns={"date": "dt"})
+            else:
+                picked = None
+                for c in long.columns:
+                    if c == "symbol":
+                        continue
+                    t = pd.to_datetime(long[c], errors="coerce")
+                    if t.notna().mean() > 0.8:
+                        long["dt"] = t
+                        picked = c
+                        break
+                if picked is None:
+                    raise ValueError("Could not infer a valid date column for 'dt'.")
+        long["dt"] = pd.to_datetime(long["dt"], errors="coerce").dt.date
+
+    else:
+        # --- Non-MI path (already long) ---
+        long = df.copy()
+        long.columns = [str(c).strip().lower() for c in long.columns]
+        # allow common synonyms for symbol
+        for alt in ("ticker", "code"):
+            if alt in long.columns and "symbol" not in long.columns:
+                long = long.rename(columns={alt: "symbol"})
+        if "symbol" not in long.columns:
+            # Not actually long → tell the user what we saw
+            raise ValueError(
+                "Non-MultiIndex input without a 'symbol' column.\n"
+                f"Columns seen: {list(long.columns)[:12]} ...\n"
+                "If your columns are wide like 'open.2330.TW' or '2330.TW_open', "
+                "please ensure they match the accepted patterns or set MultiIndex upstream."
+            )
+        if "date" in long.columns and "dt" not in long.columns:
+            long = long.rename(columns={"date": "dt"})
+        if "dt" not in long.columns:
+            raise ValueError("Missing 'dt' column.")
+        long["dt"] = pd.to_datetime(long["dt"], errors="coerce").dt.date
+        if "vwap" not in long.columns and all(c in long.columns for c in ("high", "low", "close")):
+            for c in ["open", "high", "low", "close"]:
+                if c in long.columns:
+                    long[c] = pd.to_numeric(long.get(c), errors="coerce")
+            long["vwap"] = ((long["high"] + long["low"] + long["close"]) / 3).round(6)
+        if "is_trading_day" not in long.columns:
+            long["is_trading_day"] = 1
+
+    # --- unify schema ---
+    if "symbol" not in long.columns:
+        # one last explicit fail with context
+        raise ValueError(f"'symbol' column still missing. Current columns: {list(long.columns)}")
+
+    long["symbol"] = long["symbol"].astype("string").str.strip().str.lower()
+
+    keep = ["dt", "symbol", "open", "high", "low", "close", "volume", "vwap", "is_trading_day"]
+    for k in keep:
+        if k not in long.columns:
+            long[k] = pd.NA
+
+    for c in ["open", "high", "low", "close", "vwap"]:
+        long[c] = pd.to_numeric(long[c], errors="coerce")
+    long["volume"] = pd.to_numeric(long["volume"], errors="coerce")
+
+    # drop rows where ALL OHLCV are missing
+    long = long.dropna(subset=["open", "high", "low", "close", "volume"], how="all")
+
+    if require_full_ohlcv:
+        probs = [c for c in ["open", "high", "low", "close", "volume"] if long[c].isna().all()]
+        if probs:
+            raise RuntimeError(f"Upstream missing required OHLCV: {probs}")
+
+    long = long[keep]
+    long = long.loc[:, ~long.columns.duplicated()]
+    return long
 
 def write_local_partitions(df: pd.DataFrame) -> None:
     if df.empty:
         print("NO_DATA"); return
-        # clean local cache from previous runs
+
+    # clean local cache
     if ROOT.exists():
-        shutil.rmtree(ROOT)          # <- wipe old timestamped folders
+        shutil.rmtree(ROOT)
     ROOT.mkdir(parents=True, exist_ok=True)
-    # enforce dtypes you want in Hive
-    # enforce schema
-    df = df.loc[:, ~df.columns.duplicated()]          # <- ensure 1D columns
+
+    # ensure 1D columns & stable dtypes
+    df = df.loc[:, ~df.columns.duplicated()]
     df["symbol"] = df["symbol"].astype("string").str.strip().str.lower()
+
     dt_coerced = pd.to_datetime(df["dt"], errors="coerce")
     df = df.loc[dt_coerced.notna() & df["symbol"].notna()].copy()
-    df["dt"] = pd.to_datetime(df["dt"], errors="coerce").dt.date   # <-- make it a date
+    df["dt"] = pd.to_datetime(df["dt"], errors="coerce").dt.date
 
     for c in ["open","high","low","close","vwap"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    df["volume"] = pd.to_numeric(df["volume"], errors="coerce").astype("Int64")
-    df["is_trading_day"] = pd.to_numeric(df["is_trading_day"], errors="coerce").fillna(1).astype("Int8")
+    df["volume"] = pd.to_numeric(df["volume"], errors="coerce")
+    # If volume is truly missing, set to 0; otherwise keep original numeric
+    df["volume"] = df["volume"].fillna(0).astype("Int64")
 
     for (sym, day), g in df.groupby(["symbol","dt"], sort=True):
         out = ROOT / f"symbol={sym}" / f"dt={day}"
         out.mkdir(parents=True, exist_ok=True)
-        # write ONLY the data columns; exclude dt/symbol from the file
+
+        # --- Tripwire: show what will be written
+        # print(f"WRITING PARTITION: symbol={sym} dt={day}")
+        # print(g[DATA_COLS].head().to_string(index=False))
+
         tbl = pa.Table.from_pandas(g[DATA_COLS], preserve_index=False)
         pq.write_table(tbl, out / "part-0.parquet")
+
+        # --- Tripwire: immediate readback to confirm schema/values
+        test_read = pq.read_table(out / "part-0.parquet").to_pandas()
+        # print(f"READBACK PARTITION: symbol={sym} dt={day}")
+        # print(test_read.head().to_string(index=False))
+
+        # Optional: assert readback equals what we wrote (for first row)
+        for k in ["open","high","low","close","vwap"]:
+            a = float(g.iloc[0][k]) if pd.notna(g.iloc[0][k]) else None
+            b = float(test_read.iloc[0][k]) if pd.notna(test_read.iloc[0][k]) else None
+            if a != b:
+                raise AssertionError(f"Mismatch after Parquet write: {k} wrote={a} read={b}")
 
 
 
@@ -163,37 +329,59 @@ def hdfs_put_tree(local_root: pl.Path, hdfs_root: str) -> None:
 
 
 if __name__ == "__main__":
+    import os
+    import pandas as pd
+    from src.etl.tw_stocks.fetch_normalize import fetch_ohlcv
+    from src.etl.tw_stocks.write_parquet_hdfs import to_long
+    # assuming these are already imported/defined somewhere in your module:
+    # from src.etl.tw_stocks.write_parquet_hdfs import write_local_partitions, hdfs_put_tree, ROOT, HDFS_PATH, HDFS_USER
+
     symbols = os.environ["TW_SYMBOLS"].split(",")
-    start = os.environ.get("START_DATE","2024-01-01")
-    end   = os.environ.get("END_DATE","auto")
+    start = os.environ.get("START_DATE", "2024-01-01")
+    end   = os.environ.get("END_DATE", "auto")
+    VERBOSE = os.environ.get("VERBOSE", "0") == "1"
 
-    raw = fetch_ohlcv(symbols, start, end)   # may be wide MultiIndex
-    df  = to_long(raw)                       # normalize to tidy rows
+    # 1) Fetch
+    raw = fetch_ohlcv(symbols, start, end)
 
-    # --- sanitize BEFORE any prints ---
-    # uniform symbol strings; keep or strip ".tw" as you prefer (here: keep)
+    # 2) Normalize (strict during pipeline)
+    df = to_long(raw, require_full_ohlcv=True)
+
+    # 3) Sanitize minimal fields
     df["symbol"] = df["symbol"].astype("string").str.strip().str.lower()
     df = df[df["symbol"].notna()].copy()
-
-    # coerce dt to datetime and drop invalids
     df["dt"] = pd.to_datetime(df["dt"], errors="coerce")
     df = df[df["dt"].notna()].copy()
 
-    # (optional) drop rows where all metrics are NaN
-    metric_cols = ["open","high","low","close","volume","vwap"]
-    if any(c not in df.columns for c in metric_cols):
-        missing = [c for c in metric_cols if c not in df.columns]
+    # 4) Light sanity checks
+    metric_cols = ["open", "high", "low", "close", "volume", "vwap"]
+    missing = [c for c in metric_cols if c not in df.columns]
+    if missing:
         raise ValueError(f"Missing metric columns after to_long(): {missing}")
-    df = df.dropna(subset=metric_cols, how="all")
 
-    # safe debug prints
-    syms = sorted(df["symbol"].unique().tolist())
-    print("EFFECTIVE SYMBOLS:", syms[:10])
-    print("DT RANGE:", df["dt"].min().date(), "->", df["dt"].max().date())
-    print("HDFS_PATH:", HDFS_PATH, "HDFS_USER:", HDFS_USER)
-    # ----------------------------------
+    ohlc_nulls = df[["open", "high", "low", "close"]].isna().sum().sum()
+    if ohlc_nulls >= 10:
+        raise ValueError(f"Too many OHLC nulls ({ohlc_nulls}) – investigate upstream.")
 
+    zero_vol_ratio = (df["volume"].fillna(0) == 0).mean()
+    if zero_vol_ratio >= 0.5:
+        raise ValueError(f"Suspicious share of zero volumes ({zero_vol_ratio:.2%}).")
+
+    # 5) Optional verbose info (off by default)
+    if VERBOSE:
+        non_nulls = df[["open","high","low","close","volume","vwap"]].notna().sum().to_dict()
+        print("NON-NULL COUNTS:", non_nulls)
+        print("EFFECTIVE SYMBOLS:", sorted(df["symbol"].unique().tolist())[:10])
+        print("DT RANGE:", df["dt"].min().date(), "->", df["dt"].max().date())
+
+    # 6) Write & upload
     write_local_partitions(df)      # converts dt to .date and enforces dtypes
     hdfs_put_tree(ROOT, HDFS_PATH)  # WebHDFS with user.name
-    print("HDFS_PUT_OK")
+
+    # 7) Minimal success line
+    print("OK: wrote partitions and uploaded to HDFS:",
+          HDFS_PATH,
+          "symbols=", len(df["symbol"].unique()),
+          "rows=", len(df),
+          flush=True)
 

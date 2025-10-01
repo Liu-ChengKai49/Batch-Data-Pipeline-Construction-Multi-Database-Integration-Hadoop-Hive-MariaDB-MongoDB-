@@ -10,3 +10,4 @@ htmlcov/
 dist/
 build/
 local_parquet/
+parquet_samples/2330_2024-03-01.parquet
