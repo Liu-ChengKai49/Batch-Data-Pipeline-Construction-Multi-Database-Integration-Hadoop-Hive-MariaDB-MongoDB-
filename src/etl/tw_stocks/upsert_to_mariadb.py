@@ -10,7 +10,7 @@ def _build_engine() -> sa.Engine:
         port = os.getenv("MARIA_PORT", "3306")
         db   = os.getenv("MARIA_DB",   "market")
         user = os.getenv("MARIA_USER", "user")
-        pw   = os.getenv("MARIA_PASS", "password")
+        pw   = os.getenv("MARIADB_PASSWORD", "password")
         url  = f"mysql+pymysql://{user}:{pw}@{host}:{port}/{db}?charset=utf8mb4"
 
     if os.getenv("DEBUG") == "1":
