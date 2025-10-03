@@ -343,9 +343,16 @@ if __name__ == "__main__":
 
     # 1) Fetch
     raw = fetch_ohlcv(symbols, start, end)
-
+    # 👇 add this guard
+    if raw is None or (hasattr(raw, "empty") and raw.empty):
+        print("NO_NEW_DATA: fetch_ohlcv returned empty for the requested range")
+        import sys; sys.exit(0)
+        
     # 2) Normalize (strict during pipeline)
     df = to_long(raw, require_full_ohlcv=True)
+    if df is None or df.empty:
+        print("NO_NEW_DATA: nothing to write after normalization")
+        import sys; sys.exit(0)
 
     # 3) Sanitize minimal fields
     df["symbol"] = df["symbol"].astype("string").str.strip().str.lower()

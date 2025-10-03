@@ -116,18 +116,45 @@ check:
 
 # ---------------- 1) HDFS ingest ----------------
 hdfs-ingest:
-	$(DC) exec $(JLAB) bash -lc '
-	  cd $(WORKDIR)
-	  export PYTHONPATH=$(PYTHONPATH)
-	  export TW_SYMBOLS="$(TW_SYMBOLS)"
-	  export START_DATE="$(START_DATE)"
-	  export END_DATE="$(END_DATE)"
-	  export HDFS_PATH="$(HDFS_PATH)"
-	  export HDFS_USER="$(HDFS_USER)"
-	  python -m etl.tw_stocks.write_parquet_hdfs
-	'
-	echo "INGEST_OK: wrote Parquet to $(HDFS_PATH)"
-
+	@set -euo pipefail; \
+	echo "[hdfs-ingest] deriving NEXT_START from HDFS under $(HDFS_PATH)"; \
+	# 1) get LAST=latest dt=YYYY-MM-DD seen in HDFS (sed avoids awk '$$2' quoting fights)
+	set +e; \
+	LAST=$$( docker compose exec -T namenode bash -c '\
+	  set -euo pipefail; \
+	  hdfs dfs -ls -R $(HDFS_PATH) 2>/dev/null \
+	    | sed -n '\''s/.*dt=\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/p'\'' \
+	    | sort | tail -1' | tr -d "\r" ); \
+	rc=$$?; set -e; \
+	if [ $$rc -ne 0 ]; then \
+	  echo "[hdfs-ingest] WARN: could not scan HDFS; falling back to 2024-01-01"; \
+	  LAST=""; \
+	fi; \
+	# 2) compute NEXT_START = LAST + 1 day, but never beyond (today - 1)
+	if [ -n "$$LAST" ]; then \
+	  CAND=$$(date -d "$$LAST +1 day" +%F); \
+	else \
+	  CAND=2024-01-01; \
+	fi; \
+	YEST=$$(date -d "yesterday" +%F); \
+	# clamp CAND to YEST if it overshoots
+	if [[ "$$CAND" > "$$YEST" ]]; then NEXT_START="$$YEST"; else NEXT_START="$$CAND"; fi; \
+	echo "[hdfs-ingest] LAST=$${LAST:-none}  ->  NEXT_START=$$NEXT_START  (YEST=$$YEST)"; \
+	# 3) run ETL for missing tail only
+	echo "[hdfs-ingest] launching ETL in $(JLAB)"; \
+	docker compose exec $(JLAB) bash -lc '\
+	  set -euo pipefail; \
+	  cd $(WORKDIR); \
+	  export PYTHONPATH=$(PYTHONPATH); \
+	  export TW_SYMBOLS="$(TW_SYMBOLS)"; \
+	  export START_DATE="'"$$NEXT_START"'"; \
+	  export END_DATE="$(END_DATE)"; \
+	  export HDFS_PATH="$(HDFS_PATH)"; \
+	  export HDFS_USER="$(HDFS_USER)"; \
+	  python -m etl.tw_stocks.write_parquet_hdfs \
+	'; \
+	echo "[hdfs-ingest] OK: wrote Parquet to $(HDFS_PATH)"	
+	
 # ---------------- 2) Hive setup (idempotent DDL) ----------------
 hive-setup:
 	$(DC) exec $(HIVE) bash -lc '
@@ -165,7 +192,6 @@ dq:
 	  if [ -n "$${DQ_FRESHNESS_DAYS-}" ]; then export DQ_FRESHNESS_DAYS="$(DQ_FRESHNESS_DAYS)"; fi
 	  python -m dq.run_checks
 	'
-	echo "DQ_OK"
 
 # ---------------- 5) BI views in MariaDB (idempotent SQL) ----------------
 # Run inside MariaDB container so host mysql client isn't required.
