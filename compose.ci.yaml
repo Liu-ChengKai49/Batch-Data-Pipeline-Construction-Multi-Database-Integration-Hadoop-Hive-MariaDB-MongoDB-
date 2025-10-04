@@ -9,7 +9,7 @@ services:
     ports:
       - "3306:3306"   # or "13306:3306" if 3306 is busy
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -proot || exit 1"]
+      test: ["CMD-SHELL","mysqladmin ping -h 127.0.0.1 -proot"]
       interval: 5s
       timeout: 3s
       retries: 30
