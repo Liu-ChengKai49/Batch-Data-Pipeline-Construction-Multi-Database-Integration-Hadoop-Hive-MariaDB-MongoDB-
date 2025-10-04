@@ -1,20 +1,24 @@
 Metadata-Version: 2.4
 Name: batch_pipeline
 Version: 0.1.0
-Requires-Python: >=3.10
+Requires-Python: >=3.11
 Requires-Dist: pydantic>=2.7
 Requires-Dist: pandas>=2.2
-Requires-Dist: hypothesis>=6.98
+Requires-Dist: numpy<2.0,>=1.26
 Requires-Dist: sqlalchemy>=2.0
 Requires-Dist: pymysql>=1.1
 Requires-Dist: pyarrow>=13
 Requires-Dist: requests>=2.31
 Requires-Dist: yfinance>=0.2.43
+Requires-Dist: fastapi>=0.115
+Requires-Dist: uvicorn[standard]>=0.30
+Requires-Dist: prometheus_client>=0.20
 Provides-Extra: dev
 Requires-Dist: pytest>=8.2; extra == "dev"
 Requires-Dist: pytest-cov>=5.0; extra == "dev"
 Requires-Dist: mypy>=1.11; extra == "dev"
 Requires-Dist: ruff>=0.6.8; extra == "dev"
+Requires-Dist: types-requests>=2.31.0.10; extra == "dev"
 Provides-Extra: hive
 Requires-Dist: pyhive>=0.7.0; extra == "hive"
 Requires-Dist: thrift>=0.16; extra == "hive"

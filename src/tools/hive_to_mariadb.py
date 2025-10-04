@@ -9,7 +9,7 @@ from etl.tw_stocks.upsert_to_mariadb import upsert_prices
 HIVE_HOST = os.environ.get("HIVE_HOST", "hive-server")
 HIVE_PORT = int(os.environ.get("HIVE_PORT", "10000"))
 HIVE_DB   = os.environ.get("HIVE_DB", "default")
-
+HIVE_USER = os.getenv("HIVE_USER", os.getenv("USER", "hive"))
 START_DATE = os.environ.get("START_DATE", "2024-01-01")
 END_DATE   = os.environ.get("END_DATE")
 SYMS_ENV   = os.environ.get("TW_SYMBOLS", "").strip()
@@ -17,12 +17,15 @@ SYMBOLS    = [s.strip().lower() for s in SYMS_ENV.split(",") if s.strip()] if SY
 DEBUG      = os.environ.get("DEBUG", "0") == "1"
 
 def read_from_hive(sql: str) -> pd.DataFrame:
-    conn = hive.Connection(host=HIVE_HOST, port=HIVE_PORT, username="hadoop", database=HIVE_DB)
+    conn = hive.Connection(host=HIVE_HOST, port=HIVE_PORT, username=HIVE_USER)
     try:
         return pd.read_sql(sql, conn)
     finally:
-        try: conn.close()
-        except: pass
+        try:
+            conn.close()
+        except Exception:
+            # best-effort close; log if you have a logger
+            pass
 
 def _build_sql() -> str:
     where_lines = [f"dt >= DATE '{START_DATE}'"]

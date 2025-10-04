@@ -59,27 +59,33 @@ def to_long(df: pd.DataFrame, require_full_ohlcv: bool = False) -> pd.DataFrame:
         symbol_first = all(re.match(rf"^(.+){sep}([a-z]+)$", c, flags=re.I) for c in cols)
         if metric_first:
             pairs = []
+            all_ok = True
             for c in cols:
-                m = re.match(rf"^([a-z]+){sep}(.+)$", c, flags=re.I)
+                m = re.fullmatch(rf"([a-z]+){sep}(.+)", c, flags=re.I)
+                if m is None:
+                    all_ok = False
+                    break
                 metric, sym = m.group(1).lower(), m.group(2).lower()
                 pairs.append((metric, sym))
-            if all(m in want or m == "vwap" for m, _ in pairs):
+            if all_ok and all(m in want or m == "vwap" for m, _ in pairs):
                 new_df = _df.copy()
                 new_df.columns = pd.MultiIndex.from_tuples(pairs, names=["metric", "symbol"])
                 return new_df
         elif symbol_first:
             pairs = []
+            all_ok = True
             for c in cols:
-                m = re.match(rf"^(.+){sep}([a-z]+)$", c, flags=re.I)
+                m = re.fullmatch(rf"(.+){sep}([a-z]+)", c, flags=re.I)
+                if m is None:
+                    all_ok = False
+                    break
                 sym, metric = m.group(1).lower(), m.group(2).lower()
                 pairs.append((metric, sym))
-            if all(m in want or m == "vwap" for m, _ in pairs):
+            if all_ok and all(m in want or m == "vwap" for m, _ in pairs):
                 new_df = _df.copy()
                 new_df.columns = pd.MultiIndex.from_tuples(pairs, names=["metric", "symbol"])
                 return new_df
-        return _df
 
-    df_in = df  # keep for debug message
     df = df.copy()
     # Normalize obvious 'Date' index to a column early
     if df.index.name and str(df.index.name).lower() in ("date", "dt"):
@@ -99,9 +105,10 @@ def to_long(df: pd.DataFrame, require_full_ohlcv: bool = False) -> pd.DataFrame:
         lvl0 = set(df.columns.get_level_values(0))
         lvl1 = set(df.columns.get_level_values(1))
         if want.issubset(lvl0):
-            metric_level, symbol_level = 0, 1
+            symbol_level = 1
         elif want.issubset(lvl1):
-            metric_level, symbol_level = 1, 0
+            # metric_level unused; only keep symbol_level
+            symbol_level = 0
         else:
             raise ValueError(
                 f"Could not find expected OHLCV metrics in MultiIndex levels.\n"
@@ -266,7 +273,8 @@ def to_long(df: pd.DataFrame, require_full_ohlcv: bool = False) -> pd.DataFrame:
 
 def write_local_partitions(df: pd.DataFrame) -> None:
     if df.empty:
-        print("NO_DATA"); return
+        print("NO_DATA") 
+        return
 
     # clean local cache
     if ROOT.exists():
@@ -335,8 +343,9 @@ if __name__ == "__main__":
     import os
 
     import pandas as pd
-    from src.etl.tw_stocks.fetch_normalize import fetch_ohlcv
-    from src.etl.tw_stocks.write_parquet_hdfs import to_long
+
+    from etl.tw_stocks.fetch_normalize import fetch_ohlcv
+    from etl.tw_stocks.write_parquet_hdfs import to_long
     # assuming these are already imported/defined somewhere in your module:
     # from src.etl.tw_stocks.write_parquet_hdfs import write_local_partitions, hdfs_put_tree, ROOT, HDFS_PATH, HDFS_USER
 
@@ -350,13 +359,13 @@ if __name__ == "__main__":
     # 👇 add this guard
     if raw is None or (hasattr(raw, "empty") and raw.empty):
         print("NO_NEW_DATA: fetch_ohlcv returned empty for the requested range")
-        import sys; sys.exit(0)
+        raise SystemExit(0)
         
     # 2) Normalize (strict during pipeline)
     df = to_long(raw, require_full_ohlcv=True)
     if df is None or df.empty:
         print("NO_NEW_DATA: nothing to write after normalization")
-        import sys; sys.exit(0)
+        raise SystemExit(0)
 
     # 3) Sanitize minimal fields
     df["symbol"] = df["symbol"].astype("string").str.strip().str.lower()

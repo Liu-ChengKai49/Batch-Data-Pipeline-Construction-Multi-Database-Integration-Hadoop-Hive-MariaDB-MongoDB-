@@ -86,18 +86,23 @@ SHELL := /bin/bash
 .PHONY: help hdfs-ingest hive-setup hive-export dq bi-views bi-export week2-all check compose-ps
 
 help:
-	echo ""
-	echo "Week 2 pipeline targets:"
-	echo "  hdfs-ingest   : Fetch TW stocks and write partitioned Parquet to HDFS"
-	echo "  hive-setup    : Create/repair Hive external table over HDFS data"
-	echo "  hive-export   : Export Hive data → MariaDB (idempotent on PK)"
-	echo "  dq            : Run data quality checks (optional freshness gate)"
-	echo "  bi-views      : Create BI views in MariaDB (idempotent CREATE/REPLACE)"
-	echo "  bi-export     : Export BI CSVs under bi/exports/"
-	echo "  week2-all     : Run full pipeline (ingest→hive→export→DQ→views→CSVs)"
-	echo "  check         : Quick connectivity sanity checks"
-	echo "  compose-ps    : Show running containers"
-	echo ""
+	@echo ""
+	@echo "Week 2 pipeline targets:"
+	@echo "  hdfs-ingest   : Fetch TW stocks and write partitioned Parquet to HDFS"
+	@echo "  hive-setup    : Create/repair Hive external table over HDFS data"
+	@echo "  hive-export   : Export Hive data → MariaDB (idempotent on PK)"
+	@echo "  dq            : Run data quality checks (optional freshness gate)"
+	@echo "  bi-views      : Create BI views in MariaDB (idempotent CREATE/REPLACE)"
+	@echo "  bi-export     : Export BI CSVs under bi/exports/"
+	@echo "  week2-all     : Run full pipeline (ingest→hive→export→DQ→views→CSVs)"
+	@echo "  check         : Quick connectivity sanity checks"
+	@echo "  compose-ps    : Show running containers"
+	@echo ""
+	@echo "Week 3 setup:"
+	@echo "  deps-jlab     : Install all Python deps inside jupyterlab (editable + extras)"
+	@echo "  deps-jlab-check : Verify core libs import correctly"
+	@echo ""
+
 
 compose-ps:
 	$(DC) ps
@@ -113,7 +118,31 @@ check:
 	'
 	echo "CHECK_OK"
 
+deps-jlab:
+	@echo "[deps-jlab] installing project dependencies in jupyterlab..."
+	@docker compose exec jupyterlab bash -lc 'set -euo pipefail
+	echo "[deps] python=$$(python -V)  pip=$$(pip -V)"
+	# remove conflicting pkgs you don’t use
+	pip uninstall -y numba llvmlite >/dev/null 2>&1 || true
+	pip uninstall -y backports       >/dev/null 2>&1 || true
+	# build tooling
+	python -m pip install -U pip setuptools wheel packaging
+	python -m pip install -U backports.tarfile
+	cd /work
+	# install your project
+	pip install -e .
+	pip install -e ".[dev,hive]" || true
+	echo "[deps] done."
+	'
 
+
+deps-jlab-check:
+	@docker compose exec jupyterlab bash -lc '\
+	  set -euo pipefail; \
+	  python -c "import pandas,sqlalchemy,fastapi; print(\"ok:pandas=%s sqlalchemy=%s\"%(pandas.__version__, sqlalchemy.__version__))"; \
+	  python -c "import prometheus_client; print(\"ok:prometheus\")"; \
+	  python -c "import pymysql; print(\"ok:pymysql\")"; \
+	'
 # ---------------- 1) HDFS ingest ----------------
 hdfs-ingest:
 	@set -euo pipefail; \
@@ -218,6 +247,6 @@ bi-export:
 
 
 # ---------------- One-shot pipeline ----------------
-week2-all: hdfs-ingest hive-setup hive-export dq bi-views bi-export
+week2-all: deps-jlab hdfs-ingest hive-setup hive-export dq bi-views bi-export
 	echo "WEEK2_OK"
 

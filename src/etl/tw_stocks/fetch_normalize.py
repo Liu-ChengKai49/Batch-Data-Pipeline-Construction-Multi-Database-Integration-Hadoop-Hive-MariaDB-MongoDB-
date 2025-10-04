@@ -16,10 +16,10 @@ def fetch_ohlcv(symbols: list[str], start: str, end: str):
     """
     try:
         import yfinance as yf
-    except ImportError as e:
+    except ImportError as exc:
         raise RuntimeError(
             "yfinance not installed. Run: pip install yfinance"
-        ) from e
+        ) from exc
 
     s = pd.Timestamp(start).normalize()
     e = (pd.Timestamp.today().normalize() if end == "auto"
