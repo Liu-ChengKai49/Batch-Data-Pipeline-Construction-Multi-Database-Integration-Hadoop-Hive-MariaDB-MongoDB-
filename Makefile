@@ -24,13 +24,29 @@ integ:
 test: unit integ
 
 up-ci:
-	docker compose -f compose.ci.yaml up -d
+	docker compose -f compose.ci.yaml up -d --remove-orphans
+	docker compose -f compose.ci.yaml ps
 
 down-ci:
 	docker compose -f compose.ci.yaml down -v
 
-smoke-ci: up-ci
-	python scripts/smoke_ci.py
+smoke-ci:
+	set -euo pipefail
+	docker compose -f compose.ci.yaml up -d --remove-orphans
+	echo "[wait] checking MariaDB..."
+	cid=$$(docker compose -f compose.ci.yaml ps -q mariadb)
+	for i in $$(seq 1 60); do
+	  if docker exec $$cid mariadb-admin ping -h 127.0.0.1 -uroot -proot >/dev/null 2>&1; then
+	    echo "[wait] MariaDB is alive after $$i tries"
+	    break
+	  fi
+	  echo "[wait] ... still waiting ($$i/60)"
+	  sleep 2
+	done
+	echo "[smoke] running scripts/smoke_ci.py ..."
+	MARIADB_HOST=127.0.0.1 MARIADB_PORT=3306 \
+	MARIADB_USER=demo MARIADB_PASSWORD=demo MARIADB_DB=demo \
+	python -u scripts/smoke_ci.py
 	$(MAKE) down-ci
 
 # ---------------- Week 2 (HDFS → Hive → MariaDB) ----------------
