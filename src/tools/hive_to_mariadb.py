@@ -1,7 +1,9 @@
 # src/tools/hive_to_mariadb.py
 import os
+
 import pandas as pd
 from pyhive import hive
+
 from etl.tw_stocks.upsert_to_mariadb import upsert_prices
 
 HIVE_HOST = os.environ.get("HIVE_HOST", "hive-server")

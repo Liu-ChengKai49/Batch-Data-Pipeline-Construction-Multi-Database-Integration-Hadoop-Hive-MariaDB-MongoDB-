@@ -1,7 +1,8 @@
 # src/etl/tw_stocks/fetch_normalize.py
-import os
 import datetime as dt
+
 import pandas as pd
+
 
 # ---- Provider A: Yahoo Finance (default) ----
 def _yahoo_symbol(sym: str) -> str:

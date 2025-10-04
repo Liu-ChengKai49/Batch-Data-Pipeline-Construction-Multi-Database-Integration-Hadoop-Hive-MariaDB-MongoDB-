@@ -1,12 +1,15 @@
 # etl/tw_stocks/write_parquet_hdfs.py
-import os, pathlib as pl
+import os
+import pathlib as pl
+import shutil
+from urllib.parse import quote
+
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from etl.tw_stocks.fetch_normalize import fetch_ohlcv
 import requests
-from urllib.parse import quote
-import shutil
+
+from etl.tw_stocks.fetch_normalize import fetch_ohlcv
 
 ROOT = pl.Path("local_parquet")
 HDFS_NN = os.environ.get("WEBHDFS", "http://namenode:9870")  # NameNode HTTP
@@ -330,6 +333,7 @@ def hdfs_put_tree(local_root: pl.Path, hdfs_root: str) -> None:
 
 if __name__ == "__main__":
     import os
+
     import pandas as pd
     from src.etl.tw_stocks.fetch_normalize import fetch_ohlcv
     from src.etl.tw_stocks.write_parquet_hdfs import to_long

@@ -1,7 +1,9 @@
 # src/etl/tw_stocks/upsert_to_mariadb.py
 import os
+
 import pandas as pd
 import sqlalchemy as sa
+
 
 def _build_engine() -> sa.Engine:
     url = os.getenv("MARIA_URL")
