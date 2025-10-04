@@ -15,6 +15,7 @@ services:
       - "9000:9000"
     volumes:
       - namenode-data:/hadoop/dfs/name
+      - .:/work
     environment:
     - CLUSTER_NAME=test-cluster
     - HDFS_USER=hdfs
@@ -99,11 +100,12 @@ services:
     volumes:
       - /mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dq:/opt/dq:ro
       - mariadb-data:/var/lib/mysql
+      - .:/work
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-      - MARIADB_DATABASE=hive_metastore
-      - MARIADB_USER=hive
-      - MARIADB_PASSWORD=hive_password
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
     networks:
       - big-data-net
     healthcheck:
@@ -145,6 +147,7 @@ services:
       - ./hive-site.xml:/opt/hive/conf/hive-site.xml:ro
       - ./mysql-connector-j-8.4.0.jar:/opt/hive/lib/mysql-connector-j-8.4.0.jar:ro
       - ./hadoop-conf:/opt/hadoop/etc/hadoop:ro     # <- mount the whole dir
+      - .:/work
     environment:
       HIVE_CONF_DIR: /opt/hive/conf
       HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
@@ -210,12 +213,14 @@ services:
     container_name: jupyterlab
     ports:
       - "8888:8888"
+    working_dir: /work
     volumes:
       # Mount the local notebooks directory
       - ./notebooks:/home/jovyan/work
       # Add this line to mount your local data directory
       - ./data:/home/jovyan/work/data
       - "/mnt/c/Users/harry/Desktop/工作/DE/Data-Quality-Metadata-Deployment-Practices/dq:/home/jovyan/work/dq_ext"
+      - .:/work
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - GRANT_SUDO=yes

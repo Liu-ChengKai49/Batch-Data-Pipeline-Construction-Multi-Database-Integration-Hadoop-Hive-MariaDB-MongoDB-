@@ -14,16 +14,21 @@ os.environ.setdefault("MARIADB_PASSWORD", "root")
 os.environ.setdefault("MARIADB_DB", "demo")
 
 def wait_for_mariadb(timeout_sec: int = 60) -> None:
-    start = time.time()
+    import traceback
+    start, last = time.time(), None
     for _ in range(timeout_sec):
         try:
             with mariadb_conn():
                 return
         except Exception as e:
+            last = e
             elapsed = int(time.time() - start)
-            print(f"⏳ waiting for MariaDB… ({elapsed}s) reason={e.__class__.__name__}", flush=True)
+            print(f"⏳ waiting for MariaDB… ({elapsed}s) {e.__class__.__name__}: {e!r}", flush=True)
             time.sleep(1)
+    traceback.print_exception(type(last), last, last.__traceback__)
     raise SystemExit("MariaDB not ready")
+
+
 
 def fetch_count(cur) -> int:
     row = cur.fetchone()
