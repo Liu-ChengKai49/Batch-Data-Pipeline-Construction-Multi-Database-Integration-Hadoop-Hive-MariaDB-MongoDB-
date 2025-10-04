@@ -1,7 +1,7 @@
 [project]
 name = "batch_pipeline"
 version = "0.1.0"
-requires-python = ">=3.11"   # align with your container & ruff target
+requires-python = ">=3.10"   # align with your container & ruff target
 dependencies = [
   "pydantic>=2.7",
   "pandas>=2.2",
