@@ -1,6 +1,5 @@
 README.md
 pyproject.toml
-src/__init__.py
 src/batch_pipeline/__init__.py
 src/batch_pipeline/db.py
 src/batch_pipeline/etl.py
@@ -15,7 +14,6 @@ src/bi/exports/__init__.py
 src/bi/exports/export_csv.py
 src/dq/__init__.py
 src/dq/run_checks.py
-src/etl/__init__.py
 src/etl/tw_stocks/__init__.py
 src/etl/tw_stocks/fetch_normalize.py
 src/etl/tw_stocks/upsert_to_mariadb.py
