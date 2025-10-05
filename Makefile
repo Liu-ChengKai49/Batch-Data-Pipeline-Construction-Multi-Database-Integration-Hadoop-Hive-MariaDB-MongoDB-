@@ -147,7 +147,7 @@ deps-jlab:
 	cd /work
 	# install your project
 	pip install -e .
-	pip install -e ".[dev,hive]" || true
+	pip install -e ".[dev,hive,bi]" || true
 	echo "[deps] done."
 	'
 
@@ -158,6 +158,7 @@ deps-jlab-check:
 	  python -c "import pandas,sqlalchemy,fastapi; print(\"ok:pandas=%s sqlalchemy=%s\"%(pandas.__version__, sqlalchemy.__version__))"; \
 	  python -c "import prometheus_client; print(\"ok:prometheus\")"; \
 	  python -c "import pymysql; print(\"ok:pymysql\")"; \
+	  python -c "import gspread,oauth2client; print(gspread.__version__)"; \
 	'
 # ---------------- 1) HDFS ingest ----------------
 hdfs-ingest:

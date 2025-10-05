@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: batch_pipeline
 Version: 0.1.0
-Requires-Python: >=3.11
+Requires-Python: >=3.10
 Requires-Dist: pydantic>=2.7
 Requires-Dist: pandas>=2.2
 Requires-Dist: numpy<2.0,>=1.26
@@ -16,6 +16,7 @@ Requires-Dist: prometheus_client>=0.20
 Provides-Extra: dev
 Requires-Dist: pytest>=8.2; extra == "dev"
 Requires-Dist: pytest-cov>=5.0; extra == "dev"
+Requires-Dist: hypothesis>=6; extra == "dev"
 Requires-Dist: mypy>=1.11; extra == "dev"
 Requires-Dist: ruff>=0.6.8; extra == "dev"
 Requires-Dist: types-requests>=2.31.0.10; extra == "dev"
@@ -24,3 +25,9 @@ Requires-Dist: pyhive>=0.7.0; extra == "hive"
 Requires-Dist: thrift>=0.16; extra == "hive"
 Requires-Dist: thrift-sasl>=0.4.3; extra == "hive"
 Requires-Dist: pure-sasl>=0.6.2; extra == "hive"
+Provides-Extra: bi
+Requires-Dist: gspread>=6.0.0; extra == "bi"
+Requires-Dist: oauth2client>=4.1.3; extra == "bi"
+Requires-Dist: google-auth>=2.30.0; extra == "bi"
+Requires-Dist: google-auth-oauthlib>=1.2.0; extra == "bi"
+Requires-Dist: google-api-python-client>=2.127.0; extra == "bi"
