@@ -99,8 +99,8 @@ SHELL := /bin/bash
 .ONESHELL:
 .SILENT:
 
-.PHONY: help hdfs-ingest hive-setup hive-export dq bi-views bi-export week2-all check compose-ps
-
+.PHONY: help hdfs-ingest hive-setup hive-export dq bi-views bi-export week2-all check compose-ps \
+        deps-jlab deps-jlab-check sheets-sync-jlab
 help:
 	@echo ""
 	@echo "Week 2 pipeline targets:"
@@ -108,6 +108,7 @@ help:
 	@echo "  hive-setup    : Create/repair Hive external table over HDFS data"
 	@echo "  hive-export   : Export Hive data → MariaDB (idempotent on PK)"
 	@echo "  dq            : Run data quality checks (optional freshness gate)"
+	@echo "  bi-base      : Create base tables in MariaDB (idempotent CREATE)"
 	@echo "  bi-views      : Create BI views in MariaDB (idempotent CREATE/REPLACE)"
 	@echo "  bi-export     : Export BI CSVs under bi/exports/"
 	@echo "  week2-all     : Run full pipeline (ingest→hive→export→DQ→views→CSVs)"
@@ -117,6 +118,7 @@ help:
 	@echo "Week 3 setup:"
 	@echo "  deps-jlab     : Install all Python deps inside jupyterlab (editable + extras)"
 	@echo "  deps-jlab-check : Verify core libs import correctly"
+	@echo "  sheets-sync-jlabSync BI CSVs to Google Sheets from inside jupyterlab"
 	@echo ""
 
 
@@ -239,6 +241,14 @@ dq:
 	  python -m dq.run_checks
 	'
 
+bi-base:
+	$(DC) exec $(MARIADB) bash -lc '\
+	  mariadb -u"$(MARIADB_USER)" -p"$(MARIADB_PASSWORD)" -P"$(MARIADB_PORT)" -D"$(MARIADB_DB)" -e "\
+	    SOURCE $(WORKDIR)/bi/sql/create_base_tables.sql; \
+	  " \
+	'
+	echo "BI_BASE_OK: symbols_dim, prices_daily"
+
 # ---------------- 5) BI views in MariaDB (idempotent SQL) ----------------
 # Run inside MariaDB container so host mysql client isn't required.
 bi-views:
@@ -262,8 +272,19 @@ bi-export:
 	test -s "bi/exports/symbols_dim.csv"
 	echo "BI_EXPORT_OK: CSVs in bi/exports/"
 
+# ---------------- 7) Google Sheets sync ----------------
+sheets-sync-jlab:
+	@echo "[sheets] exporting to Google Sheets from inside jupyterlab..."
+	@docker compose exec -T \
+		-e SHEETS_DOC_ID="$(SHEETS_DOC_ID)" \
+		-e MARIA_URL="$(MARIA_URL)" \
+		-e GOOGLE_SA_JSON="$(GOOGLE_SA_JSON)" \
+		jupyterlab bash -lc 'set -euo pipefail; cd /work; \
+			python bi/sheets_sync/export_to_sheets.py'
+
+
 
 # ---------------- One-shot pipeline ----------------
-week2-all: deps-jlab hdfs-ingest hive-setup hive-export dq bi-views bi-export
+week2-all: deps-jlab hdfs-ingest hive-setup hive-export dq bi-base bi-views bi-export
 	echo "WEEK2_OK"
 
