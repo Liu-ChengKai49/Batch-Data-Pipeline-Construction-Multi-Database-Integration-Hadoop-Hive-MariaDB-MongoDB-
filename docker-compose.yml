@@ -431,6 +431,8 @@ services:
       MARIADB_DB: market
     depends_on: [mariadb]
     ports: ["8000:8000"]
+    networks:
+      - big-data-net
 
   prometheus:
     image: prom/prometheus
@@ -441,7 +443,7 @@ services:
 
   grafana:
     image: grafana/grafana
-    ports: ["3000:3000"]
+    ports: ["3300:3000"]
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
     depends_on: [prometheus]

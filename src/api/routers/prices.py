@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 from ..deps import to_json
-from ...services.prices import fetch_prices
+from services.prices import fetch_prices
 router = APIRouter()
 
 @router.get("/prices")

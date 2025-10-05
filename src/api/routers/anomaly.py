@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from ..deps import to_json
-from ...services.prices import fetch_prices
-from ...services.anomaly import mad_outliers
+from services.prices import fetch_prices
+from services.anomaly import mad_outliers
 router = APIRouter()
 
 @router.get("/anomaly")
