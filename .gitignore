@@ -13,3 +13,4 @@ local_parquet/
 parquet_samples/2330_2024-03-01.parquet
 bi/exports/prices_daily.csv
 bi/exports/symbols_dim.csv
+bi/sheets_sync/service_account.json.json
