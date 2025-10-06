@@ -285,6 +285,6 @@ sheets-sync-jlab:
 
 
 # ---------------- One-shot pipeline ----------------
-week2-all: deps-jlab hdfs-ingest hive-setup hive-export dq bi-base bi-views bi-export
+week2-all: deps-jlab hdfs-ingest hive-setup hive-export dq bi-base bi-views bi-export sheets-sync-jlab
 	echo "WEEK2_OK"
 
