@@ -5,6 +5,12 @@ import sys
 import pandas as pd
 from sqlalchemy import create_engine, text
 
+# NEW: prometheus_client imports
+try:
+    from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
+except Exception:
+    CollectorRegistry = Gauge = push_to_gateway = None  # graceful fallback
+
 # Env config (your docker compose exports will override these defaults)
 REQ_ENV = {
     "MARIADB_HOST": os.getenv("MARIADB_HOST", "mariadb"),
@@ -14,8 +20,14 @@ REQ_ENV = {
     "MARIADB_DB": os.getenv("MARIADB_DB", "market"),
     "TABLE": os.getenv("DQ_TABLE", "market.prices_daily"),
 }
+
 # Optional freshness gate: set DQ_FRESHNESS_DAYS (e.g., "7")
 FRESHNESS_DAYS = os.getenv("DQ_FRESHNESS_DAYS")
+
+# NEW: Pushgateway URL (inside compose: http://pushgateway:9091; from host: http://localhost:9091)
+PUSHGATEWAY_URL = os.getenv("PUSHGATEWAY_URL", "http://pushgateway:9091")
+INSTANCE = os.getenv("HOSTNAME", "jupyterlab")
+JOB_NAME = os.getenv("DQ_JOB_NAME", "dq_pipeline")
 
 def _engine():
     uri = (
@@ -43,7 +55,6 @@ def check_no_nulls(violations: list[str]):
         violations.append(f"NULLS: found {nulls} nulls across {cols}")
 
 def check_domains_and_ranges(violations: list[str]):
-    # is_trading_day in {0,1}
     df = _q(f"""
         SELECT COALESCE(SUM(CASE
                  WHEN is_trading_day NOT IN (0,1) OR is_trading_day IS NULL
@@ -54,7 +65,6 @@ def check_domains_and_ranges(violations: list[str]):
     if bad != 0:
         violations.append("DOMAIN: is_trading_day must be 0/1 only")
 
-    # numeric ranges and cross-column constraints
     df = _q(f"""
         SELECT
           COALESCE(SUM(CASE
@@ -107,8 +117,31 @@ def run_all_checks() -> list[str]:
     check_freshness_if_enabled(violations)
     return violations
 
+# NEW: push to Pushgateway (gracefully no-op if prometheus_client missing)
+def push_dq_metric(n_fails: int):
+    if not (CollectorRegistry and Gauge and push_to_gateway):
+        print("WARN: prometheus_client not installed; skip Pushgateway", file=sys.stderr)
+        return
+    try:
+        reg = CollectorRegistry()
+        g = Gauge("dq_failures_total", "Number of last DQ failures", registry=reg)
+        g.set(float(n_fails))
+        push_to_gateway(
+            PUSHGATEWAY_URL,
+            job=JOB_NAME,
+            grouping_key={"instance": INSTANCE, "table": REQ_ENV["TABLE"]},
+            registry=reg,
+        )
+        print(f"PUSHED dq_failures_total={n_fails} to {PUSHGATEWAY_URL} (job={JOB_NAME})")
+    except Exception as e:
+        print(f"WARN: pushgateway push failed: {e}", file=sys.stderr)
+
 def main():
     violations = run_all_checks()
+    n_fails = len(violations)
+    # Push regardless of status so Grafana always shows the latest value
+    push_dq_metric(n_fails)
+
     if violations:
         print("DQ_FAIL")
         for v in violations:

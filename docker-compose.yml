@@ -451,7 +451,13 @@ services:
     depends_on: [prometheus]
     networks:
       - big-data-net
-      
+
+  pushgateway:
+    image: prom/pushgateway
+    ports: ["9091:9091"]
+    depends_on: [prometheus]
+    networks:
+      - big-data-net
 # --------------------------------------------------------------------------
 # Docker Volumes for Persistent Data
 # --------------------------------------------------------------------------
