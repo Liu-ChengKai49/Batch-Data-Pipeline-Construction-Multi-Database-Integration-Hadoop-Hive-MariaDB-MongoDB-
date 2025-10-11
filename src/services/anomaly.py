@@ -1,5 +1,8 @@
-import pandas as pd, numpy as np
-def mad_outliers(df: pd.DataFrame, col="close", z=3.5):
+import numpy as np
+import pandas as pd
+
+
+def mad_outliers(df:pd.DataFrame, col="close", z=3.5):
     x = df[col].astype(float)
     med = np.median(x)
     mad = np.median(np.abs(x - med)) or 1e-12

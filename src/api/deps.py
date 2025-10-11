@@ -1,7 +1,9 @@
 # src/api/deps.py
 import math
+
 import numpy as np
 import pandas as pd
+
 
 def _safe_scalar(v):
     # normalize numpy scalars to Python types

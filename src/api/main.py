@@ -1,13 +1,15 @@
 # src/api/main.py
 import time
+
 from fastapi import FastAPI, Request, Response
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+
+from .routers.anomaly import router as anomaly_router
 
 # ⬇️ import the routers directly as objects
 from .routers.health import router as health_router
 from .routers.prices import router as prices_router
 from .routers.signals import router as signals_router
-from .routers.anomaly import router as anomaly_router
 
 app = FastAPI(title="TW Stocks API", version="0.1.0")
 

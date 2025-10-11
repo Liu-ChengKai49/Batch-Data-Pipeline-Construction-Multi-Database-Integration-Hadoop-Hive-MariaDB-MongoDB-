@@ -1,11 +1,18 @@
-import pandas as pd, sqlalchemy as sa
+import pandas as pd
+import sqlalchemy as sa
+
 from .db import engine
+
 
 def fetch_prices(symbol: str, start: str|None=None, end: str|None=None, limit:int=500):
     where = ["symbol = :symbol"]
     params = {"symbol": symbol}
-    if start: where.append("dt >= :start"); params["start"] = start
-    if end:   where.append("dt <= :end");   params["end"] = end
+    if start: 
+      where.append("dt >= :start") 
+      params["start"] = start
+    if end:   
+      where.append("dt <= :end") 
+      params["end"] = end
     sql = f"""
       SELECT dt, symbol, open, high, low, close, volume, vwap, is_trading_day
       FROM prices_daily

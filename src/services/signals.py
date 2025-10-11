@@ -1,6 +1,7 @@
 # src/services/signals.py
 import pandas as pd
 
+
 def moving_average(df: pd.DataFrame, windows=(5, 20, 60)) -> pd.DataFrame:
     """
     Compute simple moving averages on the 'close' column.

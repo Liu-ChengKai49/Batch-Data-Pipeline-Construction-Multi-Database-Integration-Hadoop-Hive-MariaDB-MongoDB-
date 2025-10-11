@@ -1,8 +1,9 @@
 # bi/sheets_sync/export_to_sheets.py
 import os
+
+import gspread
 import pandas as pd
 import sqlalchemy as sa
-import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # --- Connection URL resolution ---

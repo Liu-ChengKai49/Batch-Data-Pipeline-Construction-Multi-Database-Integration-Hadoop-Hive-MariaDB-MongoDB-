@@ -1,8 +1,10 @@
 # src/services/signals.py
 from fastapi import APIRouter, HTTPException
-from ..deps import to_json
+
 from services.prices import fetch_prices
 from services.signals import moving_average as ma_calc
+
+from ..deps import to_json
 
 router = APIRouter()
 

@@ -1,4 +1,7 @@
-import os, sqlalchemy as sa
+import os
+
+import sqlalchemy as sa
+
 MARIADB_URL = os.getenv("MARIADB_URL") or \
     f"mysql+pymysql://{os.getenv('MARIADB_USER','root')}:{os.getenv('MARIADB_PASSWORD','')}" \
     f"@{os.getenv('MARIADB_HOST','mariadb')}:{os.getenv('MARIADB_PORT','3306')}/{os.getenv('MARIADB_DB','market')}"
