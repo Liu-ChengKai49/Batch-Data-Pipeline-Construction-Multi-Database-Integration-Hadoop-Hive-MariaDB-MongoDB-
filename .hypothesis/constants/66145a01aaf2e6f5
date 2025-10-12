@@ -1,0 +1,4 @@
+# file: /mnt/c/Users/harry/Desktop/工作/DE_project/Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-/src/dq/run_checks.py
+# hypothesis_version: 6.140.2
+
+[999999, '-', '3306', 'DQ_FAIL', 'DQ_FRESHNESS_DAYS', 'DQ_JOB_NAME', 'DQ_OK', 'DQ_TABLE', 'HOSTNAME', 'MARIADB_DB', 'MARIADB_HOST', 'MARIADB_PASSWORD', 'MARIADB_PORT', 'MARIADB_USER', 'PUSHGATEWAY_URL', 'TABLE', '__main__', 'close', 'dq_failures_total', 'dq_pipeline', 'dt', 'high', 'instance', 'is_trading_day', 'jupyterlab', 'low', 'mariadb', 'market', 'market.prices_daily', 'open', 'root', 'symbol', 'table', 'volume', 'vwap']

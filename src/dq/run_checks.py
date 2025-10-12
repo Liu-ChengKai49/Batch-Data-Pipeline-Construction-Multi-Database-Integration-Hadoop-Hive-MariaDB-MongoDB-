@@ -30,14 +30,14 @@ PUSHGATEWAY_URL = os.getenv("PUSHGATEWAY_URL", "http://pushgateway:9091")
 INSTANCE = os.getenv("HOSTNAME", "jupyterlab")
 JOB_NAME = os.getenv("DQ_JOB_NAME", "dq_pipeline")
 
-def _engine():
+def _engine(): # pragma: no cover
     uri = (
         f"mariadb+pymysql://{REQ_ENV['MARIADB_USER']}:{REQ_ENV['MARIADB_PASSWORD']}"
         f"@{REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']}/{REQ_ENV['MARIADB_DB']}"
     )
     return create_engine(uri, pool_pre_ping=True)
 
-def _q(sql: str) -> pd.DataFrame:
+def _q(sql: str) -> pd.DataFrame: # pragma: no cover
     with _engine().connect() as conn:
         return pd.read_sql(text(sql), conn)
 
@@ -145,7 +145,7 @@ def push_dq_metric(n_fails: int) -> None:
         print(f"WARN: pushgateway push failed: {e}", file=sys.stderr)
 
 
-def main():
+def main(): # pragma: no cover
     violations = run_all_checks()
     n_fails = len(violations)
     # Push regardless of status so Grafana always shows the latest value
