@@ -34,7 +34,7 @@ jobs:
       - name: Mypy
         run: mypy src
       - name: Unit tests + coverage (>=85%)
-        run: pytest -q tests/unit --cov=src/batch_pipeline --cov-report=xml:coverage.xml --cov-fail-under=85
+        run: pytest -q tests/unit --cov=src/batch_pipeline --cov=src/dq --cov-report=xml:coverage.xml --cov-fail-under=85
       - name: Upload coverage.xml
         if: always()
         uses: actions/upload-artifact@v4
