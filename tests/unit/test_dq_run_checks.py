@@ -1,7 +1,9 @@
 import builtins
+
 import pandas as pd
-import dq.run_checks as rc
 import pytest
+
+import dq.run_checks as rc
 
 
 def test_run_all_checks_ok(monkeypatch):
@@ -67,7 +69,8 @@ def test_push_dq_metric_uses_prometheus(monkeypatch):
         def __init__(self, *_a, **_k): pass
         def set(self, v): pushed["gauge"] = float(v)
 
-    class FakeReg: pass
+    class FakeReg: 
+        pass
 
     def fake_push(url, job, grouping_key, registry):
         pushed["url"] = url
