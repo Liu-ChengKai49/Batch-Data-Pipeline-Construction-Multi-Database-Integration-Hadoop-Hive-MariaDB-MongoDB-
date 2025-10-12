@@ -1,15 +1,16 @@
 # src/dq/run_checks.py
 from __future__ import annotations
+
 import os
 import sys
 import pandas as pd
-from sqlalchemy import create_engine, text
 
-# NEW: prometheus_client imports
-try:
-    from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
-except Exception:
-    CollectorRegistry = Gauge = push_to_gateway = None  # graceful fallback
+from sqlalchemy import create_engine, text
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    # editor/type-checker hints only; no runtime import
+    from prometheus_client import CollectorRegistry as _CollectorRegistry, Gauge as _Gauge
+    from prometheus_client import push_to_gateway as _push_to_gateway
 
 # Env config (your docker compose exports will override these defaults)
 REQ_ENV = {
@@ -118,10 +119,17 @@ def run_all_checks() -> list[str]:
     return violations
 
 # NEW: push to Pushgateway (gracefully no-op if prometheus_client missing)
-def push_dq_metric(n_fails: int):
-    if not (CollectorRegistry and Gauge and push_to_gateway):
+def push_dq_metric(n_fails: int) -> None:
+    """
+    Push dq_failures_total to Pushgateway.
+    If prometheus_client is not installed, skip gracefully.
+    """
+    try:
+        from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
+    except Exception:
         print("WARN: prometheus_client not installed; skip Pushgateway", file=sys.stderr)
         return
+
     try:
         reg = CollectorRegistry()
         g = Gauge("dq_failures_total", "Number of last DQ failures", registry=reg)
@@ -135,6 +143,7 @@ def push_dq_metric(n_fails: int):
         print(f"PUSHED dq_failures_total={n_fails} to {PUSHGATEWAY_URL} (job={JOB_NAME})")
     except Exception as e:
         print(f"WARN: pushgateway push failed: {e}", file=sys.stderr)
+
 
 def main():
     violations = run_all_checks()

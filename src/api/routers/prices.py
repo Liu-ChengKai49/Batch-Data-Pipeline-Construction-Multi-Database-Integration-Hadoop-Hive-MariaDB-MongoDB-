@@ -1,13 +1,22 @@
-from fastapi import APIRouter, Query
+from __future__ import annotations
 
+from datetime import date
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.engine import Connection
+
+from api.deps import get_conn
 from services.prices import fetch_prices
 
-from ..deps import to_json
+router = APIRouter(prefix="/prices", tags=["prices"])
 
-router = APIRouter()
-
-@router.get("/prices")
-def get_prices(symbol: str = Query(..., example="2330.tw"),
-               start: str|None=None, end: str|None=None, limit: int = 500):
-    df = fetch_prices(symbol, start, end, limit)
-    return to_json(df)
+@router.get("", name="list_prices")
+def list_prices(
+    symbol: str = Query(..., description="e.g. 2330.TW"),
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    limit: int | None = Query(None, ge=1, le=10000),
+    conn: Connection = Depends(get_conn),
+) -> list[dict[str, Any]]:
+    return fetch_prices(conn=conn, symbol=symbol, start=start, end=end, limit=limit)

@@ -1,19 +1,25 @@
-# src/services/signals.py
-from fastapi import APIRouter, HTTPException
+from __future__ import annotations
 
+from datetime import date
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.engine import Connection
+
+from api.deps import get_conn
 from services.prices import fetch_prices
-from services.signals import moving_average as ma_calc
+from services.signals import moving_average
 
-from ..deps import to_json
+router = APIRouter(prefix="/signals", tags=["signals"])
 
-router = APIRouter()
-
-@router.get("/signals/moving_average")
-def get_ma(symbol: str, start: str | None = None, end: str | None = None):
-    try:
-        df = fetch_prices(symbol, start, end, limit=5000)
-        out = ma_calc(df, windows=(5, 20, 60))
-        return to_json(out)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"signals.moving_average failed: {type(e).__name__}: {e}")
-
+@router.get("/moving_average")
+def moving_average_endpoint(
+    symbol: str = Query(...),
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    limit: int | None = Query(None, ge=1, le=10000),
+    window: int = Query(5, ge=1, le=365),
+    conn: Connection = Depends(get_conn),
+) -> list[dict[str, Any]]:
+    rows = fetch_prices(conn=conn, symbol=symbol, start=start, end=end, limit=limit)
+    return moving_average(rows=rows, key="close", window=window)  # <-- window (not "windows")

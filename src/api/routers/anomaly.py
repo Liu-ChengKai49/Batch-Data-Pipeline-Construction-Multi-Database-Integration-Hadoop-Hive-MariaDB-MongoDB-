@@ -1,16 +1,25 @@
-from fastapi import APIRouter
+from __future__ import annotations
 
+from datetime import date
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.engine import Connection
+
+from api.deps import get_conn
 from services.anomaly import mad_outliers
 from services.prices import fetch_prices
 
-from ..deps import to_json
+router = APIRouter(prefix="/anomaly", tags=["anomaly"])
 
-router = APIRouter()
-
-@router.get("/anomaly")
-def anomaly(symbol: str, method: str = "mad", start: str|None=None, end: str|None=None):
-    df = fetch_prices(symbol, start, end, limit=5000)
-    if method.lower()=="mad":
-        out = mad_outliers(df, col="close", z=3.5)
-        return to_json(out)
-    return {"error":"unsupported method"}
+@router.get("")
+def anomaly_endpoint(
+    symbol: str = Query(...),
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    limit: int | None = Query(None, ge=1, le=10000),
+    z: float = Query(3.5, ge=0.0),
+    conn: Connection = Depends(get_conn),
+) -> list[dict[str, Any]]:
+    rows = fetch_prices(conn=conn, symbol=symbol, start=start, end=end, limit=limit)
+    return mad_outliers(rows=rows, key="close", z=z)

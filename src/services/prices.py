@@ -1,26 +1,38 @@
-import pandas as pd
-import sqlalchemy as sa
+from __future__ import annotations
 
-from .db import engine
+from datetime import date
+from typing import Any
+
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
 
 
-def fetch_prices(symbol: str, start: str|None=None, end: str|None=None, limit:int=500):
+def fetch_prices(
+    conn: Connection,
+    symbol: str,
+    start: date | None = None,
+    end: date | None = None,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
     where = ["symbol = :symbol"]
-    params = {"symbol": symbol}
-    if start: 
-      where.append("dt >= :start") 
-      params["start"] = start
-    if end:   
-      where.append("dt <= :end") 
-      params["end"] = end
-    sql = f"""
-      SELECT dt, symbol, open, high, low, close, volume, vwap, is_trading_day
-      FROM prices_daily
-      WHERE {' AND '.join(where)}
-      ORDER BY dt DESC
-      LIMIT :limit
-    """
-    params["limit"] = limit
-    with engine.connect() as conn:
-        df = pd.read_sql(sa.text(sql), conn, params=params)
-    return df
+    params: dict[str, Any] = {"symbol": symbol}  # <-- widen value type
+
+    if start is not None:
+        where.append("dt >= :start")
+        params["start"] = start
+    if end is not None:
+        where.append("dt <= :end")
+        params["end"] = end
+
+    sql = (
+        "SELECT dt, symbol, open, high, low, close, volume, vwap, is_trading_day "
+        "FROM prices_daily "
+        f"WHERE {' AND '.join(where)} "
+        "ORDER BY dt"
+    )
+    if limit is not None:
+        sql += " LIMIT :limit"
+        params["limit"] = int(limit)
+
+    rows = conn.execute(text(sql), params).mappings().all()
+    return [dict(r) for r in rows]
