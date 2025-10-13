@@ -44,69 +44,115 @@ jobs:
   quick-integration:
     needs: unit-and-lint
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+
     services:
       mariadb:
         image: mariadb:11
         env:
           MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: demo
-        ports:
-          - 3306:3306
-      mongo:
-        image: mongo:6
-        # if you need it from the VM, also publish:
-        # ports: ["27017:27017"]
+          MARIADB_DATABASE: market
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s --health-timeout=3s --health-retries=60
+      mongodb:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd="mongosh --quiet --eval 'db.runCommand({ping:1})' || exit 1"
+          --health-interval=5s --health-timeout=3s --health-retries=60
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -U pip
-      - run: pip install ".[dev]"
 
-      - name: Install mysql client (for mysqladmin)
+      - name: Install dev deps
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[dev]"  # ensure this includes sql/mongo clients (e.g., mysql-connector-python, pymongo)
+
+      - name: Install mysql client (for mysqladmin + mysql)
         run: |
           sudo apt-get update
           sudo apt-get install -y mariadb-client
 
-      - name: Diagnose MariaDB reachability (once)
-        run: |
-          which mysqladmin || true
-          # DNS won't resolve "mariadb" on the VM; check localhost instead
-          (command -v nc >/dev/null && nc -vz -w 2 127.0.0.1 3306) || true
-          mysqladmin --connect-timeout=2 ping \
-            -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp || true
-
-      - name: Wait for MariaDB (max ~120s)
+      - name: Wait for MariaDB & MongoDB (max ~120s)
+        shell: bash
         run: |
           for i in {1..60}; do
-            if mysqladmin --connect-timeout=2 ping \
-                 -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp >/dev/null 2>&1; then
-              echo "MariaDB is up on attempt $i"
+            MUP=$(mysqladmin --connect-timeout=2 ping -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp >/dev/null 2>&1; echo $?)
+            MGP=$(mongosh --quiet --eval "db.runCommand({ping:1})" >/dev/null 2>&1; echo $?)
+            if [[ "$MUP" == "0" && "$MGP" == "0" ]]; then
+              echo "MariaDB & MongoDB are up on attempt $i"
               exit 0
             fi
-            echo "Waiting for MariaDB... ($i/60)"
-            sleep 2
+            echo "Waiting... ($i/60)"; sleep 2
           done
-          echo "MariaDB did not become ready in time"
-          exit 1
+          echo "Services not healthy"; exit 1
 
-      - name: Smoke (Pandas → MariaDB)
+      - name: Seed MariaDB
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot < data/seed_mariadb.sql
+
+      - name: Seed MongoDB (via pymongo)
         env:
+          MONGODB_URI: mongodb://127.0.0.1:27017
+        run: |
+          python - <<'PY'
+          import json, os, pymongo
+          uri = os.environ["MONGODB_URI"]
+          cli = pymongo.MongoClient(uri)
+          db = cli["market"]
+          with open("data/seed_mongo.json","r") as f:
+              docs = json.load(f)
+          db.raw.drop()
+          db.create_collection("raw")
+          db.raw.insertMany(docs) if hasattr(db.raw,"insertMany") else db.raw.insert_many(docs)
+          print("Seeded Mongo:", db.raw.count_documents({}), "docs")
+          cli.close()
+          PY
+
+      - name: Run ETL mini
+        env:
+          PYTHONPATH: src
           MARIADB_HOST: 127.0.0.1
+          MARIADB_PORT: "3306"
           MARIADB_USER: root
           MARIADB_PASSWORD: root
-          MARIADB_DB: demo
-          MARIADB_PORT: 3306
-        run: python scripts/smoke_ci.py
+          MARIADB_DB: market
+          MONGODB_URI: mongodb://127.0.0.1:27017/market
+        run: |
+          python tools/etl_mini.py
 
-      - name: Integration tests (optional)
+      - name: Integration tests (RC/PK/NULLs/schema/mongo) + coverage
         env:
+          PYTHONPATH: src
           MARIADB_HOST: 127.0.0.1
+          MARIADB_PORT: "3306"
           MARIADB_USER: root
           MARIADB_PASSWORD: root
-          MARIADB_DB: demo
-          MARIADB_PORT: 3306
-        run: pytest -q tests/integration
+          MARIADB_DB: market
+          MONGODB_URI: mongodb://127.0.0.1:27017/market
+        run: |
+          pytest -q tests/integration \
+            --cov=batch_pipeline \
+            --cov-report=term-missing:skip-covered \
+            --cov-fail-under=85
+
+      - name: Run DQ with freshness gate
+        env:
+          PYTHONPATH: src
+          MARIADB_HOST: 127.0.0.1
+          MARIADB_PORT: "3306"
+          MARIADB_USER: root
+          MARIADB_PASSWORD: root
+          MARIADB_DB: market
+          DQ_FRESHNESS_DAYS: "7"
+        run: |
+          python -m dq.run_checks
+
