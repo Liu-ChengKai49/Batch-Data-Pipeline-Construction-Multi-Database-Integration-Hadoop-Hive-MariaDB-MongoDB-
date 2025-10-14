@@ -1,6 +1,8 @@
 import os
+
 import mysql.connector as mysql
 import pymongo
+
 
 def mdb():
     return mysql.connect(
@@ -15,20 +17,25 @@ def mgdb():
     return pymongo.MongoClient(os.getenv("MONGODB_URI","mongodb://127.0.0.1:27017/market")).get_database()
 
 def test_rowcount_pk_nulls():
-    conn = mdb(); cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM prices_daily"); assert cur.fetchone()[0] >= 3
-    cur.execute("SELECT COUNT(*) = COUNT(DISTINCT dt, symbol) FROM prices_daily"); assert cur.fetchone()[0] == 1
+    conn = mdb() 
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM prices_daily") 
+    assert cur.fetchone()[0] >= 3
+    cur.execute("SELECT COUNT(*) = COUNT(DISTINCT dt, symbol) FROM prices_daily") 
+    assert cur.fetchone()[0] == 1
     cur.execute("""
       SELECT COALESCE(SUM(
         (dt IS NULL) + (symbol IS NULL) + (open IS NULL) + (close IS NULL) +
         (high IS NULL) + (low IS NULL) + (volume IS NULL) + (vwap IS NULL) +
         (is_trading_day IS NULL)
       ),0) FROM prices_daily
-    """); assert cur.fetchone()[0] == 0
+    """) 
+    assert cur.fetchone()[0] == 0
     conn.close()
 
 def test_schema_drift():
-    conn = mdb(); cur = conn.cursor()
+    conn = mdb() 
+    cur = conn.cursor()
     cur.execute("""
       SELECT COLUMN_NAME, DATA_TYPE
       FROM information_schema.columns
@@ -39,7 +46,8 @@ def test_schema_drift():
       "dt":"date","symbol":"varchar","open":"decimal","high":"decimal","low":"decimal",
       "close":"decimal","volume":"bigint","vwap":"decimal","is_trading_day":"tinyint"
     }
-    for k,v in expected.items(): assert got.get(k) == v
+    for k,v in expected.items(): 
+        assert got.get(k) == v
     conn.close()
 
 def test_mongo_loaded():
