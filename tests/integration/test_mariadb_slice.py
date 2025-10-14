@@ -1,9 +1,10 @@
 # tests/integration/test_mariadb_slice.py
 import time
 
+import pandas as pd
+
 from batch_pipeline.db import mariadb_conn, upsert_prices
 from batch_pipeline.etl import clean_prices
-import pandas as pd
 
 
 def _wait_db():
