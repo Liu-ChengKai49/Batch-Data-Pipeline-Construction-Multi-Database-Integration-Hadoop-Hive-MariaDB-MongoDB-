@@ -14,6 +14,7 @@ dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
   "prometheus_client>=0.20",
+  "pymongo>=4.7", 
 ]
 
 [project.optional-dependencies]
