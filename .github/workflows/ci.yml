@@ -33,8 +33,8 @@ jobs:
         run: ruff check .
       - name: Mypy
         run: mypy src
-      - name: Unit tests + coverage (>=85%)
-        run: pytest -q tests/unit --cov=src/batch_pipeline --cov=src/dq --cov-report=xml:coverage.xml --cov-fail-under=85
+      - name: Unit tests (no coverage gate)
+        run: pytest -q tests/unit
       - name: Upload coverage.xml
         if: always()
         uses: actions/upload-artifact@v4
@@ -144,7 +144,7 @@ jobs:
         run: |
           python -m tools.etl_mini
 
-      - name: Integration tests (RC/PK/NULLs/schema/mongo) + coverage
+      - name: Unit + Integration with unified coverage (gate here)
         env:
           PYTHONPATH: src
           MARIADB_HOST: 127.0.0.1
@@ -154,8 +154,8 @@ jobs:
           MARIADB_DB: market
           MONGODB_URI: mongodb://127.0.0.1:27017/market
         run: |
-          pytest -q tests/integration \
-            --cov=batch_pipeline \
+          pytest -q tests/unit tests/integration \
+            --cov=batch_pipeline --cov=dq \
             --cov-report=term-missing:skip-covered \
             --cov-fail-under=85
 
