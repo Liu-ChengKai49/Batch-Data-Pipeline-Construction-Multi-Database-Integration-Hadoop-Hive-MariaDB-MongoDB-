@@ -99,22 +99,37 @@ jobs:
       - name: Seed MariaDB
         run: |
           mysql -h 127.0.0.1 -P 3306 -uroot -proot -D market < data/seed_mariadb.sql
+
       - name: Seed MongoDB (via pymongo)
         env:
           MONGODB_URI: mongodb://127.0.0.1:27017
         run: |
           python - <<'PY'
           import json, os, pymongo
-          uri = os.environ["MONGODB_URI"]
-          cli = pymongo.MongoClient(uri)
-          db = cli["market"]
-          with open("data/seed_mongo.json","r") as f:
+
+          uri = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017")
+          client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=5000)
+
+          # Confirm server is reachable
+          client.admin.command("ping")
+
+          db = client["market"]
+
+          # Load docs
+          with open("data/seed_mongo.json", "r", encoding="utf-8") as f:
               docs = json.load(f)
-          db.raw.drop()
+          if isinstance(docs, dict):
+              docs = [docs]
+
+          # Reset / insert
+          col = db.get_collection("raw")
+          col.drop()
           db.create_collection("raw")
-          db.raw.insertMany(docs) if hasattr(db.raw,"insertMany") else db.raw.insert_many(docs)
-          print("Seeded Mongo:", db.raw.count_documents({}), "docs")
-          cli.close()
+          col = db.get_collection("raw")
+          result = col.insert_many(docs)
+
+          print("Seeded Mongo:", col.count_documents({}), "docs, inserted ids:", len(result.inserted_ids))
+          client.close()
           PY
 
       - name: Run ETL mini
