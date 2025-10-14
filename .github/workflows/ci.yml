@@ -76,22 +76,23 @@ jobs:
           python -m pip install -U pip
           pip install -e ".[dev]"  # ensure this includes sql/mongo clients (e.g., mysql-connector-python, pymongo)
 
-      - name: Install DB clients (mysql + mongosh)
+      - name: Install mysql client (for mysqladmin + mysql)
         run: |
           sudo apt-get update
-          sudo apt-get install -y mariadb-client mongodb-mongosh
-          
-      - name: Wait for MariaDB & MongoDB (max ~120s)
+          sudo apt-get install -y mariadb-client
+
+      - name: Wait for MariaDB & MongoDB (max ~180s)
         shell: bash
         run: |
-          for i in {1..60}; do
-            MUP=$(mysqladmin --connect-timeout=2 ping -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp >/dev/null 2>&1; echo $?)
-            MGP=$(mongosh --quiet --eval "db.runCommand({ping:1})" >/dev/null 2>&1; echo $?)
+          for i in {1..90}; do
+            MUP=$((echo > /dev/tcp/127.0.0.1/3306) >/dev/null 2>&1; echo $?)
+            MGP=$((echo > /dev/tcp/127.0.0.1/27017) >/dev/null 2>&1; echo $?)
             if [[ "$MUP" == "0" && "$MGP" == "0" ]]; then
-              echo "MariaDB & MongoDB are up on attempt $i"
-              exit 0
+              echo "MariaDB & MongoDB ports are open on attempt $i"
+              # optional extra: confirm MariaDB is truly ready
+              mysqladmin --connect-timeout=2 ping -h 127.0.0.1 -P 3306 -uroot -proot --protocol=tcp --silent && exit 0
             fi
-            echo "Waiting... ($i/60)"; sleep 2
+            echo "Waiting... ($i/90)"; sleep 2
           done
           echo "Services not healthy"; exit 1
 
