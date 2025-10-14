@@ -98,8 +98,7 @@ jobs:
 
       - name: Seed MariaDB
         run: |
-          mysql -h 127.0.0.1 -P 3306 -uroot -proot < data/seed_mariadb.sql
-
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot -D market < data/seed_mariadb.sql
       - name: Seed MongoDB (via pymongo)
         env:
           MONGODB_URI: mongodb://127.0.0.1:27017
