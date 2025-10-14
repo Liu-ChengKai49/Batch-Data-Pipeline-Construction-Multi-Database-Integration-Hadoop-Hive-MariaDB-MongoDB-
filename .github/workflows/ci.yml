@@ -53,15 +53,15 @@ jobs:
           MARIADB_ROOT_PASSWORD: root
           MARIADB_DATABASE: market
         ports: ["3306:3306"]
-        options: >-
-          --health-cmd="mysqladmin ping -proot"
-          --health-interval=5s --health-timeout=3s --health-retries=60
+        # options: >-
+        #   --health-cmd="mysqladmin ping -proot"
+        #   --health-interval=5s --health-timeout=3s --health-retries=60
       mongodb:
         image: mongo:7
         ports: ["27017:27017"]
-        options: >-
-          --health-cmd="mongosh --quiet --eval 'db.runCommand({ping:1})' || exit 1"
-          --health-interval=5s --health-timeout=3s --health-retries=60
+        # options: >-
+        #   --health-cmd="mongosh --quiet --eval 'db.runCommand({ping:1})' || exit 1"
+        #   --health-interval=5s --health-timeout=3s --health-retries=60
 
     steps:
       - uses: actions/checkout@v4
