@@ -142,7 +142,7 @@ jobs:
           MARIADB_DB: market
           MONGODB_URI: mongodb://127.0.0.1:27017/market
         run: |
-          python tools/etl_mini.py
+          python -m tools.etl_mini
 
       - name: Integration tests (RC/PK/NULLs/schema/mongo) + coverage
         env:
