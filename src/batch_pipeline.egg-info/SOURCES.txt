@@ -32,4 +32,5 @@ src/services/db.py
 src/services/prices.py
 src/services/signals.py
 src/tools/__init__.py
+src/tools/etl_mini.py
 src/tools/hive_to_mariadb.py

@@ -41,11 +41,11 @@ jobs:
         with:
           name: coverage-${{ matrix.python-version }}
           path: coverage.xml 
+          
   quick-integration:
     needs: unit-and-lint
     runs-on: ubuntu-latest
     timeout-minutes: 25
-
     services:
       mariadb:
         image: mariadb:11
