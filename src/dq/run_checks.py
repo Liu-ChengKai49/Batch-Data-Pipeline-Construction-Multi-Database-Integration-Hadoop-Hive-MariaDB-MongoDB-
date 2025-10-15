@@ -102,13 +102,15 @@ def check_freshness_if_enabled(violations: list[str]):
     except ValueError:
         violations.append("CONFIG: DQ_FRESHNESS_DAYS must be integer")
         return
+
     df = _q(f"""
         SELECT COALESCE(DATEDIFF(CURRENT_DATE(), MAX(dt)), 999999) AS days_since_max
         FROM {REQ_ENV['TABLE']}
     """)
-    gap = int(df.iloc[0, 0] or 999999)
+    gap = int(df.iloc[0, 0])  # <-- no "or 999999"!
     if gap > days:
         violations.append(f"FRESHNESS: last dt is {gap} days old (> {days})")
+
 
 def run_all_checks() -> list[str]:
     violations: list[str] = []
