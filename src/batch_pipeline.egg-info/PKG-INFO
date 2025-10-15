@@ -13,6 +13,7 @@ Requires-Dist: yfinance>=0.2.43
 Requires-Dist: fastapi>=0.115
 Requires-Dist: uvicorn[standard]>=0.30
 Requires-Dist: prometheus_client>=0.20
+Requires-Dist: pymongo>=4.7
 Provides-Extra: dev
 Requires-Dist: pytest>=8.2; extra == "dev"
 Requires-Dist: pytest-cov>=5.0; extra == "dev"
@@ -20,6 +21,7 @@ Requires-Dist: hypothesis>=6; extra == "dev"
 Requires-Dist: mypy>=1.11; extra == "dev"
 Requires-Dist: ruff>=0.6.8; extra == "dev"
 Requires-Dist: types-requests>=2.31.0.10; extra == "dev"
+Requires-Dist: mysql-connector-python>=9.0; extra == "dev"
 Provides-Extra: hive
 Requires-Dist: pyhive>=0.7.0; extra == "hive"
 Requires-Dist: thrift>=0.16; extra == "hive"

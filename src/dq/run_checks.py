@@ -12,14 +12,15 @@ if TYPE_CHECKING:
     from prometheus_client import CollectorRegistry as _CollectorRegistry, Gauge as _Gauge
     from prometheus_client import push_to_gateway as _push_to_gateway
 
+DBNAME = os.getenv("MARIADB_DB", "market")
 # Env config (your docker compose exports will override these defaults)
 REQ_ENV = {
     "MARIADB_HOST": os.getenv("MARIADB_HOST", "mariadb"),
     "MARIADB_PORT": int(os.getenv("MARIADB_PORT", "3306")),
     "MARIADB_USER": os.getenv("MARIADB_USER", "root"),
     "MARIADB_PASSWORD": os.getenv("MARIADB_PASSWORD", os.getenv("MARIADB_ROOT_PASSWORD", "")),
-    "MARIADB_DB": os.getenv("MARIADB_DB", "market"),
-    "TABLE": os.getenv("DQ_TABLE", "market.prices_daily"),
+    "MARIADB_DB": DBNAME,
+    "TABLE": os.getenv("DQ_TABLE", f"{DBNAME}.prices_daily"),  # <-- use DBNAME here
 }
 
 # Optional freshness gate: set DQ_FRESHNESS_DAYS (e.g., "7")
@@ -32,7 +33,7 @@ JOB_NAME = os.getenv("DQ_JOB_NAME", "dq_pipeline")
 
 def _engine(): # pragma: no cover
     uri = (
-        f"mariadb+pymysql://{REQ_ENV['MARIADB_USER']}:{REQ_ENV['MARIADB_PASSWORD']}"
+        f"mysql+pymysql://{REQ_ENV['MARIADB_USER']}:{REQ_ENV['MARIADB_PASSWORD']}"
         f"@{REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']}/{REQ_ENV['MARIADB_DB']}"
     )
     return create_engine(uri, pool_pre_ping=True)
@@ -101,13 +102,15 @@ def check_freshness_if_enabled(violations: list[str]):
     except ValueError:
         violations.append("CONFIG: DQ_FRESHNESS_DAYS must be integer")
         return
+
     df = _q(f"""
         SELECT COALESCE(DATEDIFF(CURRENT_DATE(), MAX(dt)), 999999) AS days_since_max
         FROM {REQ_ENV['TABLE']}
     """)
-    gap = int(df.iloc[0, 0] or 999999)
+    gap = int(df.iloc[0, 0])  # <-- no "or 999999"!
     if gap > days:
         violations.append(f"FRESHNESS: last dt is {gap} days old (> {days})")
+
 
 def run_all_checks() -> list[str]:
     violations: list[str] = []
@@ -146,6 +149,18 @@ def push_dq_metric(n_fails: int) -> None:
 
 
 def main(): # pragma: no cover
+    try:
+        with _engine().connect() as c:
+            curdb = c.exec_driver_sql("SELECT DATABASE()").scalar()
+            cnt, max_dt = c.exec_driver_sql(f"SELECT COUNT(*), MAX(dt) FROM {REQ_ENV['TABLE']}").fetchone()
+        print(
+            f"DQ → host={REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']} "
+            f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={REQ_ENV['TABLE']} "
+            f"probe_cnt={cnt} probe_max_dt={max_dt}"
+        )
+    except Exception as e:
+        print(f"DQ → debug failed: {e}")
+
     violations = run_all_checks()
     n_fails = len(violations)
     # Push regardless of status so Grafana always shows the latest value

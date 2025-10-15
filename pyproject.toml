@@ -14,6 +14,7 @@ dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
   "prometheus_client>=0.20",
+  "pymongo>=4.7", 
 ]
 
 [project.optional-dependencies]
@@ -24,6 +25,7 @@ dev = [
   "mypy>=1.11",
   "ruff>=0.6.8",
   "types-requests>=2.31.0.10",
+  "mysql-connector-python>=9.0",  
 ]
 hive = [
   "pyhive>=0.7.0",
@@ -47,7 +49,11 @@ src = ["src", "tests", "scripts"]
 extend-exclude = ["notebooks", "dq", "data", "hadoop-conf"]
 
 [tool.ruff.lint]
-extend-select = ["I"]
+select = ["E", "F", "I"]
+ignore = ["E501"]  # ignore globally
+
+[tool.ruff.lint.isort]
+known-first-party = ["batch_pipeline", "dq"]
 
 [[tool.mypy.overrides]]
 module = ["pymysql.*"]

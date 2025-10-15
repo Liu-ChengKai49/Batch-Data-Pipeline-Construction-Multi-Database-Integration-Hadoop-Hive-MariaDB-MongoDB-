@@ -9,6 +9,7 @@ yfinance>=0.2.43
 fastapi>=0.115
 uvicorn[standard]>=0.30
 prometheus_client>=0.20
+pymongo>=4.7
 
 [bi]
 gspread>=6.0.0
@@ -24,6 +25,7 @@ hypothesis>=6
 mypy>=1.11
 ruff>=0.6.8
 types-requests>=2.31.0.10
+mysql-connector-python>=9.0
 
 [hive]
 pyhive>=0.7.0

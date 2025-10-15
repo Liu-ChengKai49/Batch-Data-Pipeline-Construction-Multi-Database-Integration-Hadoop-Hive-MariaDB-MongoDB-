@@ -1,22 +1,75 @@
 name: release
+
 on:
   push:
-    tags: ['v*.*.*']
+    tags: ['v*.*.*']      # build on version tags; add branches: [main] if you also want main pushes
+
 permissions:
   contents: read
   packages: write
+
 jobs:
   build-push:
     runs-on: ubuntu-latest
+
+    # OPTIONAL: build more than one image (uncomment and add to the 'with:' below)
+    # strategy:
+    #   matrix:
+    #     image:
+    #       - name: batch-etl
+    #         dockerfile: docker/etl.Dockerfile
+    #       - name: dq-runner
+    #         dockerfile: docker/dq-runner.Dockerfile
+
     steps:
       - uses: actions/checkout@v4
+
+      # Log in to GHCR
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Set up buildx (multi-arch)
       - uses: docker/setup-buildx-action@v3
-      - name: Build
-        run: docker build -f docker/etl.Dockerfile -t ghcr.io/${{ github.repository_owner }}/batch-etl:${GITHUB_REF_NAME} .
-      - name: Push
-        run: docker push ghcr.io/${{ github.repository_owner }}/batch-etl:${GITHUB_REF_NAME}
+
+      # Generate image tags + OCI labels automatically
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # primary image (owner/repo -> ghcr.io/<owner>/batch-etl)
+          images: |
+            ghcr.io/${{ github.repository_owner }}/batch-etl
+          # If using the matrix above, replace with:
+          # images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+            type=sha,format=long,prefix=commit-
+          labels: |
+            org.opencontainers.image.title=Batch ETL
+            org.opencontainers.image.description=Batch ETL container image for data pipeline
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+
+      # Build & push multi-arch with caching
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/etl.Dockerfile
+          # If using the matrix, swap to: file: ${{ matrix.image.dockerfile }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Speed up builds using registry cache
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/batch-etl:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/batch-etl:buildcache,mode=max
+          # Optional: pass build args into your Dockerfile
+          build-args: |
+            BUILD_SHA=${{ github.sha }}
+            BUILD_REF=${{ github.ref_name }}
+            BUILD_DATE=${{ github.event.repository.pushed_at || github.run_started_at }}
+          provenance: false  # set true if you want attestations/SBOM later
