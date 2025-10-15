@@ -150,7 +150,7 @@ def main(): # pragma: no cover
     try:
         with _engine().connect() as c:
             curdb = c.exec_driver_sql("SELECT DATABASE()").scalar()
-            cnt, max_dt = c.exec_driver_sql(f"SELECT COUNT(*), MAX(dt) FROM {TBL_IDENT}").fetchone()
+            cnt, max_dt = c.exec_driver_sql(f"SELECT COUNT(*), MAX(dt) FROM {REQ_ENV['TABLE']}").fetchone()
         print(
             f"DQ → host={REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']} "
             f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={REQ_ENV['TABLE']} "
