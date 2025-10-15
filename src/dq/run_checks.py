@@ -19,7 +19,7 @@ REQ_ENV = {
     "MARIADB_USER": os.getenv("MARIADB_USER", "root"),
     "MARIADB_PASSWORD": os.getenv("MARIADB_PASSWORD", os.getenv("MARIADB_ROOT_PASSWORD", "")),
     "MARIADB_DB": os.getenv("MARIADB_DB", "market"),
-    "TABLE": os.getenv("DQ_TABLE", "market.prices_daily"),
+    "TABLE": os.getenv("DQ_TABLE", f"{DBNAME}.prices_daily"),
 }
 
 # Optional freshness gate: set DQ_FRESHNESS_DAYS (e.g., "7")

@@ -188,6 +188,7 @@ jobs:
           MARIADB_USER: root
           MARIADB_PASSWORD: root
           MARIADB_DB: market
+          DQ_TABLE: prices_daily
           DQ_FRESHNESS_DAYS: "7"
         run: |
           python -m dq.run_checks
