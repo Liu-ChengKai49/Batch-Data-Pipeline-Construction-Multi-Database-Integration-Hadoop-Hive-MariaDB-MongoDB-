@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable
 
 import pymysql
 from pymysql.cursors import DictCursor
@@ -58,12 +58,14 @@ def build_upsert_sql(table: str = "prices_daily", database: str | None = None) -
     return (
         "INSERT INTO "
         f"{target}\n"
-        "(symbol, dt, open, high, low, close, volume)\n"
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)\n"
+        "(symbol, dt, open, high, low, close, volume, vwap, is_trading_day)\n"
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)\n"
         "ON DUPLICATE KEY UPDATE\n"
         "  open=VALUES(open), high=VALUES(high), low=VALUES(low),\n"
-        "  close=VALUES(close), volume=VALUES(volume);"
+        "  close=VALUES(close), volume=VALUES(volume),\n"
+        "  vwap=VALUES(vwap), is_trading_day=VALUES(is_trading_day);"
     )
+
 
 
 def _ensure_schema_and_table(conn) -> None:
@@ -80,23 +82,40 @@ def _ensure_schema_and_table(conn) -> None:
               low  DOUBLE NOT NULL,
               close DOUBLE NOT NULL,
               volume BIGINT NOT NULL,
+              vwap DOUBLE NOT NULL,
+              is_trading_day TINYINT NOT NULL,
               PRIMARY KEY (symbol, dt)
             ) ENGINE=InnoDB;
             """
         )
-        # View mirrors base table in the SAME database the test connects to
+        # In case the table existed from an older schema, add missing columns:
+        cur.execute(f"ALTER TABLE `{db}`.`prices_daily` ADD COLUMN IF NOT EXISTS vwap DOUBLE NOT NULL")
+        cur.execute(f"ALTER TABLE `{db}`.`prices_daily` ADD COLUMN IF NOT EXISTS is_trading_day TINYINT NOT NULL")
+
         cur.execute(
             f"""
             CREATE OR REPLACE VIEW `{db}`.`prices_daily_mart` AS
-            SELECT symbol, dt, open, high, low, close, volume
+            SELECT symbol, dt, open, high, low, close, volume, vwap, is_trading_day
             FROM `{db}`.`prices_daily`;
             """
         )
 
 
-def _as_tuples(rows: Iterable[Dict[str, Any]]) -> List[Tuple[Any, ...]]:
-    order = ("symbol", "dt", "open", "high", "low", "close", "volume")
-    return [tuple(r[k] for k in order) for r in rows]
+
+def _as_tuples(rows):
+    out = []
+    for r in rows:
+        vwap = r.get("vwap", r.get("close"))          # default vwap to close
+        is_td = int(r.get("is_trading_day", 1))       # default to trading day
+        out.append((
+            r["symbol"],
+            r["dt"],
+            r["open"], r["high"], r["low"], r["close"],
+            r["volume"],
+            vwap,
+            is_td,
+        ))
+    return out
 
 
 def upsert_prices_conn(conn, rows: Iterable[Dict[str, Any]], *, table: str = "prices_daily") -> int:
