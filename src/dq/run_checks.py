@@ -151,7 +151,7 @@ def main(): # pragma: no cover
         with _engine().connect() as c:
             curdb = c.exec_driver_sql("SELECT DATABASE()").scalar()
         print(f"DQ → host={REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']} "
-              f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={REQ_ENV["TABLE"]}")
+              f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={REQ_ENV['TABLE']}")
     except Exception as e:
         print(f"DQ → debug failed: {e}")
 
