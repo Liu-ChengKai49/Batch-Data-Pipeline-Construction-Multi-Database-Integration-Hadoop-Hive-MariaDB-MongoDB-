@@ -30,8 +30,10 @@ def test_upsert_slice():
     _ensure_mart_view()
 
     raw = pd.DataFrame([
-        {"symbol": "2330", "dt": "2025-09-01", "open": 100, "high": 110, "low": 90, "close": 120, "volume": 5},
-        {"symbol": "2330", "dt": "2025-09-01", "open": 100, "high": 110, "low": 90, "close": 105, "volume": 6},
+    {"symbol": "2330", "dt": "2025-09-01", "open": 100, "high": 110, "low": 90,
+     "close": 120, "volume": 5, "vwap": 120, "is_trading_day": 1},
+    {"symbol": "2330", "dt": "2025-09-01", "open": 100, "high": 110, "low": 90,
+     "close": 105, "volume": 6, "vwap": 105, "is_trading_day": 1},
     ])
     df = clean_prices(raw)
 
