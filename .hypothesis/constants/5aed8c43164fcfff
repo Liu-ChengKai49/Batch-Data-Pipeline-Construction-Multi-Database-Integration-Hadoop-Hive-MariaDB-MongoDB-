@@ -1,0 +1,4 @@
+# file: /mnt/c/Users/harry/Desktop/工作/DE_project/Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-/src/batch_pipeline/db.py
+# hypothesis_version: 6.140.2
+
+['127.0.0.1', '3306', 'MARIADB_DB', 'MARIADB_HOST', 'MARIADB_PASSWORD', 'MARIADB_PORT', 'MARIADB_USER', 'build_upsert_sql', 'close', 'db', 'dt', 'high', 'low', 'mariadb_conn', 'market', 'open', 'prices_daily', 'root', 'symbol', 'upsert_prices', 'upsert_prices_conn', 'utf8mb4', 'volume']
