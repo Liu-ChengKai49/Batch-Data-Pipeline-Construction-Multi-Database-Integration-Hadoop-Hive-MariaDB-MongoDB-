@@ -33,7 +33,7 @@ JOB_NAME = os.getenv("DQ_JOB_NAME", "dq_pipeline")
 
 def _engine(): # pragma: no cover
     uri = (
-        f"mariadb+pymysql://{REQ_ENV['MARIADB_USER']}:{REQ_ENV['MARIADB_PASSWORD']}"
+        f"mysql+pymysql://{REQ_ENV['MARIADB_USER']}:{REQ_ENV['MARIADB_PASSWORD']}"
         f"@{REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']}/{REQ_ENV['MARIADB_DB']}"
     )
     return create_engine(uri, pool_pre_ping=True)
@@ -150,8 +150,12 @@ def main(): # pragma: no cover
     try:
         with _engine().connect() as c:
             curdb = c.exec_driver_sql("SELECT DATABASE()").scalar()
-        print(f"DQ → host={REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']} "
-              f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={REQ_ENV['TABLE']}")
+            cnt, max_dt = c.exec_driver_sql(f"SELECT COUNT(*), MAX(dt) FROM {TBL_IDENT}").fetchone()
+        print(
+            f"DQ → host={REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']} "
+            f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={TBL_IDENT} "
+            f"probe_cnt={cnt} probe_max_dt={max_dt}"
+        )
     except Exception as e:
         print(f"DQ → debug failed: {e}")
 
