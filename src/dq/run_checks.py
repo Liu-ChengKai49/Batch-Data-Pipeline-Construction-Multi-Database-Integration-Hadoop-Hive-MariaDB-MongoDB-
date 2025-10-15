@@ -153,7 +153,7 @@ def main(): # pragma: no cover
             cnt, max_dt = c.exec_driver_sql(f"SELECT COUNT(*), MAX(dt) FROM {TBL_IDENT}").fetchone()
         print(
             f"DQ → host={REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']} "
-            f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={TBL_IDENT} "
+            f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={REQ_ENV['TABLE']} "
             f"probe_cnt={cnt} probe_max_dt={max_dt}"
         )
     except Exception as e:
