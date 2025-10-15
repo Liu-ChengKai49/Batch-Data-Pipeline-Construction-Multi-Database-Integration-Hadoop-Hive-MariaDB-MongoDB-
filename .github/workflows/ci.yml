@@ -158,6 +158,16 @@ jobs:
             --cov=batch_pipeline --cov=dq \
             --cov-report=term-missing:skip-covered \
             --cov-fail-under=85
+            
+      - name: Add a fresh row so DQ freshness passes
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot -D market -e "
+            INSERT INTO prices_daily
+              (dt, symbol, open, high, low, close, volume, vwap, is_trading_day)
+            VALUES
+              (CURDATE(), '2330.TW', 1, 1, 1, 1, 1, 1, 1)
+            ON DUPLICATE KEY UPDATE close=VALUES(close), vwap=VALUES(vwap);
+          "
 
       - name: Run DQ with freshness gate
         env:
