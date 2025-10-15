@@ -237,6 +237,7 @@ dq:
 	  export MARIADB_USER=$(MARIADB_USER)
 	  export MARIADB_PASSWORD=$(MARIADB_PASSWORD)
 	  export MARIADB_DB=$(MARIADB_DB)
+	  export DQ_TABLE="$(MARIADB_DB).$(DQ_TABLE)"
 	  if [ -n "$${DQ_FRESHNESS_DAYS-}" ]; then export DQ_FRESHNESS_DAYS="$(DQ_FRESHNESS_DAYS)"; fi
 	  python -m dq.run_checks
 	'

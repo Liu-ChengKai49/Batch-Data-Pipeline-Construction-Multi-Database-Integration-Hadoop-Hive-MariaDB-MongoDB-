@@ -12,14 +12,15 @@ if TYPE_CHECKING:
     from prometheus_client import CollectorRegistry as _CollectorRegistry, Gauge as _Gauge
     from prometheus_client import push_to_gateway as _push_to_gateway
 
+DBNAME = os.getenv("MARIADB_DB", "market")
 # Env config (your docker compose exports will override these defaults)
 REQ_ENV = {
     "MARIADB_HOST": os.getenv("MARIADB_HOST", "mariadb"),
     "MARIADB_PORT": int(os.getenv("MARIADB_PORT", "3306")),
     "MARIADB_USER": os.getenv("MARIADB_USER", "root"),
     "MARIADB_PASSWORD": os.getenv("MARIADB_PASSWORD", os.getenv("MARIADB_ROOT_PASSWORD", "")),
-    "MARIADB_DB": os.getenv("MARIADB_DB", "market"),
-    "TABLE": os.getenv("DQ_TABLE", f"{DBNAME}.prices_daily"),
+    "MARIADB_DB": DBNAME,
+    "TABLE": os.getenv("DQ_TABLE", f"{DBNAME}.prices_daily"),  # <-- use DBNAME here
 }
 
 # Optional freshness gate: set DQ_FRESHNESS_DAYS (e.g., "7")
