@@ -147,6 +147,14 @@ def push_dq_metric(n_fails: int) -> None:
 
 
 def main(): # pragma: no cover
+    try:
+        with _engine().connect() as c:
+            curdb = c.exec_driver_sql("SELECT DATABASE()").scalar()
+        print(f"DQ → host={REQ_ENV['MARIADB_HOST']}:{REQ_ENV['MARIADB_PORT']} "
+              f"db={REQ_ENV['MARIADB_DB']} current_db={curdb} table={TBL_IDENT}")
+    except Exception as e:
+        print(f"DQ → debug failed: {e}")
+        
     violations = run_all_checks()
     n_fails = len(violations)
     # Push regardless of status so Grafana always shows the latest value
