@@ -158,7 +158,7 @@ jobs:
             --cov=batch_pipeline --cov=dq \
             --cov-report=term-missing:skip-covered \
             --cov-fail-under=85
-            
+
       - name: Add a fresh row so DQ freshness passes
         run: |
           mysql -h 127.0.0.1 -P 3306 -uroot -proot -D market -e "
@@ -169,6 +169,17 @@ jobs:
             ON DUPLICATE KEY UPDATE close=VALUES(close), vwap=VALUES(vwap);
           "
 
+      - name: Inspect DB state before DQ
+        run: |
+          set -e
+          echo "Database is: $(mysql -h 127.0.0.1 -P 3306 -uroot -proot -Nse 'SELECT DATABASE()')"
+          echo "Tables in market:"
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot -D market -e "SHOW TABLES;"
+          echo "Rowcount / MAX(dt) seen by DQ:"
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot -D market -e "
+            SELECT COUNT(*) AS cnt, MAX(dt) AS max_dt FROM prices_daily;
+          "
+          
       - name: Run DQ with freshness gate
         env:
           PYTHONPATH: src
