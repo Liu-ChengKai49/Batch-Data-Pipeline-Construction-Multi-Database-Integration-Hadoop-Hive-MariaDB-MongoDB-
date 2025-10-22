@@ -2,74 +2,76 @@ name: release
 
 on:
   push:
-    tags: ['v*.*.*']      # build on version tags; add branches: [main] if you also want main pushes
-
-permissions:
-  contents: read
-  packages: write
+    branches: [main]
+    tags: ["v*.*.*"]
 
 jobs:
   build-push:
     runs-on: ubuntu-latest
-
-    # OPTIONAL: build more than one image (uncomment and add to the 'with:' below)
-    # strategy:
-    #   matrix:
-    #     image:
-    #       - name: batch-etl
-    #         dockerfile: docker/etl.Dockerfile
-    #       - name: dq-runner
-    #         dockerfile: docker/dq-runner.Dockerfile
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image:
+          - name: batch-etl                 # <-- final image name on GHCR
+            file: docker/etl.Dockerfile     # <-- path to Dockerfile
+            context: .                      # <-- build context
+            cache: buildcache-etl           # <-- per-image cache key
+          # add more images here if needed (e.g., API, DQ)
 
     steps:
       - uses: actions/checkout@v4
 
-      # Log in to GHCR
-      - uses: docker/login-action@v3
+      - name: Set lower-case owner
+        id: repo
+        run: |
+          echo "owner_lc=${GITHUB_REPOSITORY_OWNER@L}" >> "$GITHUB_OUTPUT"
+          echo "repo_name=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Set up buildx (multi-arch)
-      - uses: docker/setup-buildx-action@v3
-
-      # Generate image tags + OCI labels automatically
+      # Compute tags + OCI labels automatically
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          # primary image (owner/repo -> ghcr.io/<owner>/batch-etl)
-          images: |
-            ghcr.io/${{ github.repository_owner }}/batch-etl
-          # If using the matrix above, replace with:
-          # images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}
+          images: ghcr.io/${{ steps.repo.outputs.owner_lc }}/${{ matrix.image.name }}
           tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=commit-
             type=ref,event=tag
-            type=raw,value=latest
-            type=sha,format=long,prefix=commit-
+            type=semver,pattern={{version}},enable={{is_semver}}
           labels: |
-            org.opencontainers.image.title=Batch ETL
-            org.opencontainers.image.description=Batch ETL container image for data pipeline
-            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            org.opencontainers.image.title=${{ matrix.image.name }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
 
-      # Build & push multi-arch with caching
-      - name: Build and push
+      - name: Build & Push (multi-arch)
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: docker/etl.Dockerfile
-          # If using the matrix, swap to: file: ${{ matrix.image.dockerfile }}
-          push: true
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
           platforms: linux/amd64,linux/arm64
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Speed up builds using registry cache
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/batch-etl:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/batch-etl:buildcache,mode=max
-          # Optional: pass build args into your Dockerfile
           build-args: |
-            BUILD_SHA=${{ github.sha }}
-            BUILD_REF=${{ github.ref_name }}
-            BUILD_DATE=${{ github.event.repository.pushed_at || github.run_started_at }}
-          provenance: false  # set true if you want attestations/SBOM later
+            VERSION=${{ steps.meta.outputs.version || '0.0.0' }}
+            REVISION=${{ github.sha }}
+            REPO_URL=${{ github.server_url }}/${{ github.repository }}
+            TITLE=${{ matrix.image.name }}
+          cache-from: type=registry,ref=ghcr.io/${{ steps.repo.outputs.owner_lc }}/${{ matrix.image.name }}:${{ matrix.image.cache }}
+          cache-to: type=registry,ref=ghcr.io/${{ steps.repo.outputs.owner_lc }}/${{ matrix.image.name }}:${{ matrix.image.cache }},mode=max
+          provenance: false
