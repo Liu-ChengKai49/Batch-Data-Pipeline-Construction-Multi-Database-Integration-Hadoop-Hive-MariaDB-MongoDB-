@@ -47,16 +47,18 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ steps.repo.outputs.owner_lc }}/${{ matrix.image.name }}
+          images: ghcr.io/liu-chengkai49/batch-etl
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short,prefix=commit-
             type=ref,event=tag
             type=semver,pattern={{version}},enable={{is_semver}}
           labels: |
-            org.opencontainers.image.title=${{ matrix.image.name }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.title=batch-etl
+            org.opencontainers.image.source=https://github.com/Liu-ChengKai49/Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-
             org.opencontainers.image.revision=${{ github.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Build & Push (multi-arch)
         uses: docker/build-push-action@v6
