@@ -49,15 +49,16 @@ jobs:
         with:
           images: ghcr.io/liu-chengkai49/batch-etl
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=sha,format=short,prefix=commit-
             type=ref,event=tag
-            type=semver,pattern={{version}},enable={{is_semver}}
+            type=semver,pattern={{version}}
           labels: |
             org.opencontainers.image.title=batch-etl
             org.opencontainers.image.source=https://github.com/Liu-ChengKai49/Batch-Data-Pipeline-Construction-Multi-Database-Integration-Hadoop-Hive-MariaDB-MongoDB-
             org.opencontainers.image.revision=${{ github.sha }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
 
 
 
